@@ -3,477 +3,1123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>極致創藝設計股份有限公司 - 人力資源與勞動法規管理系統</title>
-    <!-- Tailwind CSS CDN -->
+    <title>草圖設計工作室 - 人事薪資與差勤管理系統 (勞基法合規版)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .active-tab {
-            border-bottom: 2px solid #2563eb;
-            color: #2563eb;
-            font-weight: 600;
-            background-color: #eff6ff;
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background-color: white !important; font-size: 12pt; }
+            .print-page { page-break-after: always; margin: 0; padding: 1.5cm; }
+            .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+            .border { border-color: #cbd5e1 !important; }
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800 font-sans antialiased">
+<body>
+    <div id="root"></div>
 
-    <!-- 1. 登入視窗 (預設顯示) -->
-    <div id="login-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
-            <div class="bg-slate-900 text-white p-8 text-center relative">
-                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl mx-auto mb-3 shadow-lg shadow-blue-500/30">
-                    A
-                </div>
-                <h2 class="text-xl font-bold tracking-wide">極致創藝設計股份有限公司</h2>
-                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider">Apex Design Co., Ltd. - Enterprise HR Portal</p>
-            </div>
-            
-            <form onsubmit="handleLogin(event)" class="p-8 space-y-5">
-                <div id="login-error" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs px-4 py-3 rounded-lg font-medium">
-                    ⚠️ 帳號或密碼錯誤，請重新輸入。
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">管理者帳號</label>
-                    <input type="text" id="login-username" required placeholder="請輸入管理者帳號" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">密碼</label>
-                    <input type="password" id="login-password" required placeholder="請輸入密碼" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg shadow-lg shadow-blue-600/20 text-sm transition">
-                    安全登入系統
-                </button>
-                <div class="text-center text-xs text-slate-400 pt-2">
-                    💡 預設測試帳號：<span class="font-mono text-slate-600 font-bold">admin</span> / 密碼：<span class="font-mono text-slate-600 font-bold">admin123</span>
-                </div>
-            </form>
-        </div>
-    </div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-    <!-- 2. 主系統介面 (預設隱藏) -->
-    <div id="app-container" class="hidden">
-        <!-- Top Navbar -->
-        <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-16">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-blue-600 text-white w-9 h-9 rounded-lg font-black text-lg flex items-center justify-center">A</div>
-                        <div>
-                            <h1 class="text-base font-bold leading-none">極致創藝設計股份有限公司</h1>
-                            <span class="text-[10px] text-slate-400 uppercase tracking-wider">HR & Legal Compliance Portal</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                            <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
-                            <span class="text-xs text-slate-200 font-medium" id="user-display">系統管理員</span>
-                        </div>
-                        <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition border border-slate-700 hover:border-transparent">
-                            登出
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab Navigation -->
-            <div class="bg-slate-800 border-t border-slate-700/50">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <nav class="flex space-x-1 overflow-x-auto text-xs sm:text-sm font-medium" id="tabs">
-                        <button onclick="switchTab('employees')" id="tab-employees" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition active-tab">
-                            👥 員工與薪資帳戶管理
-                        </button>
-                        <button onclick="switchTab('contract')" id="tab-contract" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
-                            📄 勞動契約管理
-                        </button>
-                        <button onclick="switchTab('leave')" id="tab-leave" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
-                            🏖️ 勞基法休假規定
-                        </button>
-                        <button onclick="switchTab('rules')" id="tab-rules" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
-                            📐 設計公司工作守則
-                        </button>
-                    </nav>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content Area -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-            <!-- 1. 員工與薪資帳戶管理頁面 -->
-            <section id="page-employees" class="tab-page space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                    <div>
-                        <h2 class="text-lg font-bold text-slate-900">員工名冊與薪資帳戶管理</h2>
-                        <p class="text-xs text-slate-500 mt-0.5">可在此維護員工個資、職稱、離到職狀況與撥薪銀行帳號資訊。</p>
-                    </div>
-                    <button onclick="openEmployeeModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
-                        <span>+</span> 新增員工資料
-                    </button>
-                </div>
-
-                <!-- 員工表格 -->
-                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-sm text-slate-600">
-                            <thead class="bg-slate-50/80 text-slate-700 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
-                                <tr>
-                                    <th class="px-6 py-4">工號</th>
-                                    <th class="px-6 py-4">姓名</th>
-                                    <th class="px-6 py-4">部門 / 職稱</th>
-                                    <th class="px-6 py-4">到職日</th>
-                                    <th class="px-6 py-4">薪資帳戶資訊</th>
-                                    <th class="px-6 py-4 text-center">管理動作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="employee-list" class="divide-y divide-slate-100">
-                                <!-- JavaScript 動態渲染 -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 2. 勞動契約管理 -->
-            <section id="page-contract" class="tab-page hidden space-y-6">
-                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
-                    <div class="border-b border-slate-100 pb-4">
-                        <h2 class="text-xl font-bold text-slate-900">極致創藝設計股份有限公司 - 勞動契約條款範本</h2>
-                        <p class="text-xs text-slate-500 mt-1">適用於不定期勞動契約，符合台灣勞動基準法規範</p>
-                    </div>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
-                            <h3 class="font-bold text-slate-800 text-sm">一、 工作內容與服務地點</h3>
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                受僱人同意接受公司之指揮監督，執行設計專案、視覺美工、客戶對接及其他交辦事項。工作地點為公司登記地址或專案指定地點。
-                            </p>
-                        </div>
-                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
-                            <h3 class="font-bold text-slate-800 text-sm">二、 工作時間與休息</h3>
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                每日正常工作時間為 8 小時（09:30 - 18:30），午休 12:30 - 13:30。採雙週/四週變形工時，加班需事前完成系統申請程序。
-                            </p>
-                        </div>
-                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
-                            <h3 class="font-bold text-slate-800 text-sm">三、 薪資發放與指定帳戶</h3>
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                薪資於每月 5 日匯入員工提供之金融機構轉帳帳戶（逢假日順延）。公司依法投保勞健保、職災保險並按月提繳 6% 勞工退休金。
-                            </p>
-                        </div>
-                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
-                            <h3 class="font-bold text-slate-800 text-sm">四、 智慧財產權與專案保密</h3>
-                            <p class="text-xs text-slate-600 leading-relaxed">
-                                員工於任職期間職務上完成之設計著作，其智慧財產權完全歸屬公司所有。未經許可不得私自複製、攜出專案資產與客戶資料。
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 3. 請假與特休規定 -->
-            <section id="page-leave" class="tab-page hidden space-y-6">
-                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
-                    <div class="border-b border-slate-100 pb-4">
-                        <h2 class="text-xl font-bold text-slate-900">勞動基準法假別與特別休假標準</h2>
-                    </div>
-                    
-                    <div class="space-y-4">
-                        <h3 class="font-bold text-sm text-blue-600 flex items-center gap-1.5">📌 法定特別休假天數表（勞基法第38條）</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                <div class="text-slate-500 text-xs">6 個月以上未滿 1 年</div>
-                                <div class="text-xl font-black text-blue-600 mt-1">3 天</div>
-                            </div>
-                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                <div class="text-slate-500 text-xs">1 年以上未滿 2 年</div>
-                                <div class="text-xl font-black text-blue-600 mt-1">7 天</div>
-                            </div>
-                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                <div class="text-slate-500 text-xs">2 年以上未滿 3 年</div>
-                                <div class="text-xl font-black text-blue-600 mt-1">10 天</div>
-                            </div>
-                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                <div class="text-slate-500 text-xs">3 年以上未滿 5 年</div>
-                                <div class="text-xl font-black text-blue-600 mt-1">14 天 / 年</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3 pt-4">
-                        <h3 class="font-bold text-sm text-slate-800">📌 常見假別與給薪基準</h3>
-                        <div class="grid md:grid-cols-2 gap-4 text-xs">
-                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
-                                <span class="font-bold text-slate-800">普通傷病假：</span>未住院一年內 30 日內半薪，超越部分不給薪。
-                            </div>
-                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
-                                <span class="font-bold text-slate-800">事假：</span>一年內最高 14 日，期間不給工資。
-                            </div>
-                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
-                                <span class="font-bold text-slate-800">婚假：</span>給予 8 日，工資照給。
-                            </div>
-                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
-                                <span class="font-bold text-slate-800">喪假：</span>父母、配偶喪亡給予 8 日，工資照給。
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 4. 工作守則 -->
-            <section id="page-rules" class="tab-page hidden space-y-6">
-                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
-                    <div class="border-b border-slate-100 pb-4">
-                        <h2 class="text-xl font-bold text-slate-900">極致創藝設計 - 工作守則規範</h2>
-                    </div>
-                    <div class="space-y-4 text-xs text-slate-600">
-                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
-                            <h3 class="font-bold text-slate-800 text-sm">1. 設計資產與檔案雲端同步</h3>
-                            <p class="leading-relaxed">所有專案檔（AI, PSD, Figma）每日下班前須同步至企業雲端硬碟，禁止私存於個人外接裝置。</p>
-                        </div>
-                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
-                            <h3 class="font-bold text-slate-800 text-sm">2. 商業字型與素材授權規章</h3>
-                            <p class="leading-relaxed">專案必須使用公司採購之合法授權商用圖庫與字體，嚴禁使用侵權素材。</p>
-                        </div>
-                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
-                            <h3 class="font-bold text-slate-800 text-sm">3. 專案交付與專案管理規程</h3>
-                            <p class="leading-relaxed">設計師應遵守 PM 制定之排程，若遇到客戶重大修正導致延誤，需於 24 小時內通報。</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
-    <!-- 3. 新增 / 編輯員工彈出視窗 Modal -->
-    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8 overflow-hidden border border-slate-100">
-            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
-                <h3 class="font-bold text-base" id="modal-title">新增員工資料</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition text-lg">✕</button>
-            </div>
-            
-            <form id="employee-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
-                <input type="hidden" id="edit-index" value="-1">
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">員工工號 *</label>
-                        <input type="text" id="emp-id" required placeholder="如: T915" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">姓名 *</label>
-                        <input type="text" id="emp-name" required placeholder="如: 陳小明" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">部門 *</label>
-                        <input type="text" id="emp-dept" required placeholder="如: 設計部" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">職稱 *</label>
-                        <input type="text" id="emp-title" required placeholder="如: 資深 UI 設計師" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">到職日期 *</label>
-                    <input type="date" id="emp-date" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-
-                <!-- 薪資帳戶區塊 -->
-                <div class="border-t border-slate-100 pt-4 space-y-3">
-                    <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">💳 薪資劃撥帳戶資訊</h4>
-                    <div class="grid grid-cols-3 gap-3">
-                        <div>
-                            <label class="block text-[11px] font-medium text-slate-500 mb-1">銀行代碼 (3碼)</label>
-                            <input type="text" id="emp-bank-code" maxlength="3" placeholder="822" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div class="col-span-2">
-                            <label class="block text-[11px] font-medium text-slate-500 mb-1">銀行與分行名稱</label>
-                            <input type="text" id="emp-bank-name" placeholder="中國信託 營業部" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-medium text-slate-500 mb-1">薪資帳號</label>
-                        <input type="text" id="emp-account" placeholder="123456789012" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
-                    </div>
-                </div>
-
-                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition">取消</button>
-                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition shadow-md shadow-blue-600/20">儲存資料</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- JavaScript 邏輯 -->
-    <script>
-        // 預設指定員工資料 (含範例薪資帳號)
-        let employees = [
-            { id: 'T9014', name: '姜美辰', dept: '設計部', title: '設計師', date: '2023-03-15', bankCode: '822', bankName: '中國信託', account: '901823712893' },
-            { id: 'T701', name: '戴葳葳', dept: '設計部', title: '設計總監', date: '2020-01-10', bankCode: '013', bankName: '國泰世華', account: '023501928301' },
-            { id: 'T801', name: '姚芳庭', dept: '專案部', title: '專案經理 (PM)', date: '2021-06-01', bankCode: '808', bankName: '玉山銀行', account: '081293810293' },
-            { id: 'T901', name: '林恩希', dept: '視覺傳達部', title: '視覺設計師', date: '2022-09-20', bankCode: '008', bankName: '華南銀行', account: '162938102938' },
-            { id: 'T914', name: '莊凱鈞', dept: '多媒體設計部', title: '動態美術設計師', date: '2023-11-01', bankCode: '822', bankName: '中國信託', account: '542019283102' }
+        // 預載員工資料
+        const initialEmployees = [
+            { id: "T9014", name: "姜美辰", dept: "草圖設計部", title: "專案設計師", baseSalary: 45000, mealAllowance: 3000, positionAllowance: 2000, bonus: 2000, laborGrade: 45800, healthGrade: 45800, bankAccount: "822-123456789012", onboardDate: "2024-03-15" },
+            { id: "T701",  name: "戴葳葳", dept: "草圖設計部", title: "資深設計師", baseSalary: 50000, mealAllowance: 3000, positionAllowance: 5000, bonus: 3000, laborGrade: 50600, healthGrade: 50600, bankAccount: "013-987654321098", onboardDate: "2022-09-01" },
+            { id: "T801",  name: "姚芳庭", dept: "營運管理部", title: "專案經理",   baseSalary: 48000, mealAllowance: 3000, positionAllowance: 4000, bonus: 2500, laborGrade: 48200, healthGrade: 48200, bankAccount: "808-555444333222", onboardDate: "2023-01-10" },
+            { id: "T901",  name: "林恩希", dept: "多媒體設計部", title: "視覺設計師", baseSalary: 42000, mealAllowance: 3000, positionAllowance: 2000, bonus: 1500, laborGrade: 43900, healthGrade: 43900, bankAccount: "004-111222333444", onboardDate: "2024-06-01" },
+            { id: "T914",  name: "莊凱鈞", dept: "資訊技術部", title: "系統工程師", baseSalary: 46000, mealAllowance: 3000, positionAllowance: 3000, bonus: 2000, laborGrade: 45800, healthGrade: 45800, bankAccount: "012-777888999000", onboardDate: "2024-08-16" }
         ];
 
-        // 登入驗證邏輯
-        function handleLogin(e) {
-            e.preventDefault();
-            const user = document.getElementById('login-username').value.trim();
-            const pass = document.getElementById('login-password').value.trim();
+        // 預載差勤紀錄
+        const initialAttendanceLogs = [
+            { empId: "T701", empName: "戴葳葳", category: "請假", item: "事假", hours: 8, amount: -1667, status: "已核准", date: "2026-09-16", reason: "有事情請假" }
+        ];
 
-            if (user === 'admin' && pass === 'admin123') {
-                document.getElementById('login-overlay').classList.add('hidden');
-                document.getElementById('app-container').classList.remove('hidden');
-                document.getElementById('login-error').classList.add('hidden');
-                renderEmployees();
-            } else {
-                document.getElementById('login-error').classList.remove('hidden');
-            }
-        }
+        // 勞健保費率對照表
+        const calculateLaborInsurance = (wage) => {
+            const laborRate = 0.115; // 勞保費率11.5%
+            const selfShare = 0.20;  // 個人自負20%
+            return Math.round(wage * laborRate * selfShare);
+        };
 
-        // 登出
-        function handleLogout() {
-            document.getElementById('app-container').classList.add('hidden');
-            document.getElementById('login-overlay').classList.remove('hidden');
-            document.getElementById('login-username').value = '';
-            document.getElementById('login-password').value = '';
-        }
+        const calculateHealthInsurance = (wage) => {
+            const healthRate = 0.0517; // 健保費率5.17%
+            const selfShare = 0.30;    // 個人自負30%
+            return Math.round(wage * healthRate * selfShare);
+        };
 
-        // 切換頁籤
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-page').forEach(page => page.classList.add('hidden'));
-            document.querySelectorAll('#tabs button').forEach(btn => btn.classList.remove('active-tab'));
+        function App() {
+            // 登入狀態
+            const [isLoggedIn, setIsLoggedIn] = useState(true);
+            const [currentUser, setCurrentUser] = useState({ id: "admin", name: "系統管理員", role: "admin" });
+            const [loginForm, setLoginForm] = useState({ username: "admin", password: "123" });
+
+            // 系統資料狀態
+            const [employees, setEmployees] = useState(initialEmployees);
+            const [attendanceLogs, setAttendanceLogs] = useState(initialAttendanceLogs);
+            const [currentTab, setCurrentTab] = useState("dashboard"); 
+            const [selectedEmpId, setSelectedEmpId] = useState("T701");
+            const [payPeriod, setPayPeriod] = useState("2026-09");
             
-            document.getElementById(`page-${tabId}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabId}`).classList.add('active-tab');
-        }
+            // 模態視窗狀態 (新增/編輯/刪除員工)
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [showEditModal, setShowEditModal] = useState(false);
+            const [showDeleteModal, setShowDeleteModal] = useState(false);
+            const [empToDelete, setEmpToDelete] = useState(null);
 
-        // 渲染員工列表 (含編輯與薪資帳戶)
-        function renderEmployees() {
-            const tbody = document.getElementById('employee-list');
-            tbody.innerHTML = '';
-
-            if (employees.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">目前尚無任何員工資料</td></tr>`;
-                return;
-            }
-
-            employees.forEach((emp, index) => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/80 transition';
-                
-                const bankInfo = (emp.bankCode || emp.bankName || emp.account) 
-                    ? `<div class="text-xs"><span class="font-bold text-slate-700">(${emp.bankCode || '---'}) ${emp.bankName || ''}</span><br><span class="font-mono text-slate-500">${emp.account || '未填寫'}</span></div>`
-                    : `<span class="text-xs text-slate-400 italic">未設定帳戶</span>`;
-
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-mono font-bold text-blue-600 text-xs">${emp.id}</td>
-                    <td class="px-6 py-4 font-bold text-slate-900">${emp.name}</td>
-                    <td class="px-6 py-4">
-                        <div class="text-xs font-semibold text-slate-800">${emp.dept}</div>
-                        <div class="text-[11px] text-slate-500">${emp.title}</div>
-                    </td>
-                    <td class="px-6 py-4 text-xs font-mono">${emp.date}</td>
-                    <td class="px-6 py-4">${bankInfo}</td>
-                    <td class="px-6 py-4 text-center">
-                        <div class="flex justify-center items-center gap-2">
-                            <button onclick="openEmployeeModal(${index})" class="text-xs border border-slate-200 hover:bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md transition font-medium">
-                                ✏️ 編輯
-                            </button>
-                            <button onclick="deleteEmployee(${index})" class="text-xs border border-rose-200 hover:bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md transition font-medium">
-                                🗑️ 刪除
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
+            // 新增員工表單狀態
+            const [newEmp, setNewEmp] = useState({
+                id: "", name: "", dept: "草圖設計部", title: "設計師",
+                baseSalary: 42000, mealAllowance: 3000, positionAllowance: 2000, bonus: 0,
+                laborGrade: 45800, healthGrade: 45800, bankAccount: "", onboardDate: "2026-09-01"
             });
-        }
 
-        // 開啟 Modal (區分新增/編輯)
-        function openEmployeeModal(index = -1) {
-            const modal = document.getElementById('modal');
-            const form = document.getElementById('employee-form');
-            form.reset();
+            // 編輯員工表單狀態
+            const [editEmp, setEditEmp] = useState(null);
 
-            if (index >= 0) {
-                // 編輯模式
-                const emp = employees[index];
-                document.getElementById('modal-title').innerText = `編輯員工資料 - ${emp.name}`;
-                document.getElementById('edit-index').value = index;
-                document.getElementById('emp-id').value = emp.id;
-                document.getElementById('emp-name').value = emp.name;
-                document.getElementById('emp-dept').value = emp.dept;
-                document.getElementById('emp-title').value = emp.title;
-                document.getElementById('emp-date').value = emp.date;
-                document.getElementById('emp-bank-code').value = emp.bankCode || '';
-                document.getElementById('emp-bank-name').value = emp.bankName || '';
-                document.getElementById('emp-account').value = emp.account || '';
-            } else {
-                // 新增模式
-                document.getElementById('modal-title').innerText = '新增員工資料';
-                document.getElementById('edit-index').value = -1;
-            }
+            // 公司資訊
+            const [company, setCompany] = useState({
+                name: "草圖設計工作室",
+                taxId: "83749201",
+                address: "新竹市東區光復路二段100號",
+                phone: "03-5712345",
+                hrManager: "戴葳葳",
+                payDay: "每月 1 日 (遇假日順延)",
+                nextPayDate: "2026-10-01",
+                baseHours: 240
+            });
 
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
+            // 請假與加班時數統計
+            const getEmpAttendanceSummary = (empId) => {
+                const empLogs = attendanceLogs.filter(log => log.empId === empId && log.status === "已核准");
+                let unpaidLeaveHours = 0;   
+                let halfPaidLeaveHours = 0; 
+                let otWeekdayHours = 0;     
+                let otRestdayHours = 0;     
+                let otNationalHours = 0;    
 
-        // 關閉 Modal
-        function closeModal() {
-            const modal = document.getElementById('modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
+                empLogs.forEach(log => {
+                    if (log.category === "請假") {
+                        if (log.item === "事假" || log.item === "曠職") {
+                            unpaidLeaveHours += Number(log.時數 || log.hours || 0);
+                        } else if (log.item === "病假" || log.item === "生理假") {
+                            halfPaidLeaveHours += Number(log.時數 || log.hours || 0);
+                        }
+                    } else if (log.category === "加班") {
+                        if (log.item.includes("平日")) otWeekdayHours += Number(log.時數 || log.hours || 0);
+                        else if (log.item.includes("休息日")) otRestdayHours += Number(log.時數 || log.hours || 0);
+                        else if (log.item.includes("國定")) otNationalHours += Number(log.時數 || log.hours || 0);
+                        else otWeekdayHours += Number(log.時數 || log.hours || 0);
+                    }
+                });
 
-        // 儲存表單 (新增或更新)
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            const editIndex = parseInt(document.getElementById('edit-index').value);
-            
-            const empData = {
-                id: document.getElementById('emp-id').value.trim(),
-                name: document.getElementById('emp-name').value.trim(),
-                dept: document.getElementById('emp-dept').value.trim(),
-                title: document.getElementById('emp-title').value.trim(),
-                date: document.getElementById('emp-date').value,
-                bankCode: document.getElementById('emp-bank-code').value.trim(),
-                bankName: document.getElementById('emp-bank-name').value.trim(),
-                account: document.getElementById('emp-account').value.trim()
+                return { unpaidLeaveHours, halfPaidLeaveHours, otWeekdayHours, otRestdayHours, otNationalHours, logs: empLogs };
             };
 
-            // 新增時檢查工號重複
-            if (editIndex === -1 && employees.some(e => e.id === empData.id)) {
-                alert('該工號已存在！請填寫不同的工號。');
-                return;
+            // 勞基法薪資計算邏輯
+            const calculateSalary = (emp) => {
+                const totalFixed = emp.baseSalary + emp.mealAllowance + emp.positionAllowance;
+                const hourlyRate = Math.round((totalFixed / 240) * 100) / 100;
+                
+                const att = getEmpAttendanceSummary(emp.id);
+
+                const unpaidDeduction = Math.round(att.unpaidLeaveHours * hourlyRate);
+                const halfPaidDeduction = Math.round(att.halfPaidLeaveHours * hourlyRate * 0.5);
+                const totalLeaveDeduction = unpaidDeduction + halfPaidDeduction;
+
+                const otWeekdayFee = att.otWeekdayHours <= 2 
+                    ? Math.round(att.otWeekdayHours * hourlyRate * 1.34)
+                    : Math.round(2 * hourlyRate * 1.34 + (att.otWeekdayHours - 2) * hourlyRate * 1.67);
+
+                const otRestdayFee = att.otRestdayHours <= 2
+                    ? Math.round(att.otRestdayHours * hourlyRate * 1.34)
+                    : Math.round(2 * hourlyRate * 1.34 + (att.otRestdayHours - 2) * hourlyRate * 1.67);
+
+                const otNationalFee = Math.round(att.otNationalHours * hourlyRate * 2.0);
+
+                const totalOvertimeFee = otWeekdayFee + otRestdayFee + otNationalFee;
+                const totalGross = totalFixed + emp.bonus + totalOvertimeFee;
+
+                const laborSelf = calculateLaborInsurance(emp.laborGrade);
+                const healthSelf = calculateHealthInsurance(emp.healthGrade);
+                const totalDeductions = laborSelf + healthSelf + totalLeaveDeduction;
+
+                const netPay = totalGross - totalDeductions;
+                const laborPensionCompany = Math.round(emp.laborGrade * 0.06);
+
+                return {
+                    hourlyRate,
+                    totalFixed,
+                    unpaidDeduction,
+                    halfPaidDeduction,
+                    totalLeaveDeduction,
+                    otWeekdayFee,
+                    otRestdayFee,
+                    otNationalFee,
+                    totalOvertimeFee,
+                    totalGross,
+                    laborSelf,
+                    healthSelf,
+                    totalDeductions,
+                    netPay,
+                    laborPensionCompany,
+                    att
+                };
+            };
+
+            // 全體薪資總計計算
+            const salarySummary = useMemo(() => {
+                let grossTotal = 0;
+                let netTotal = 0;
+                let otTotal = 0;
+                let leaveDeductionTotal = 0;
+
+                employees.forEach(emp => {
+                    const calc = calculateSalary(emp);
+                    grossTotal += calc.totalGross;
+                    netTotal += calc.netPay;
+                    otTotal += calc.totalOvertimeFee;
+                    leaveDeductionTotal += calc.totalLeaveDeduction;
+                });
+
+                return { grossTotal, netTotal, otTotal, leaveDeductionTotal, empCount: employees.length };
+            }, [employees, attendanceLogs]);
+
+            // CSV 上傳處理
+            const handleFileUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const text = event.target.result;
+                    const lines = text.split(/\r\n|\n/);
+                    if (lines.length < 2) return;
+
+                    const newLogs = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+
+                        const cols = line.split(',').map(c => c.replace(/^["']|["']$/g, '').trim());
+                        if (cols.length >= 7) {
+                            const [empId, empName, category, item, start, end, hours, reason, amount, status] = cols;
+                            newLogs.push({
+                                empId: empId || "T701",
+                                empName: empName || "未命名",
+                                category: category || "請假",
+                                item: item || "事假",
+                                hours: parseFloat(hours) || 0,
+                                amount: parseInt(amount) || 0,
+                                status: status || "已核准",
+                                reason: reason || "",
+                                date: start ? start.substring(0, 15) : "2026-09-16"
+                            });
+                        }
+                    }
+
+                    if (newLogs.length > 0) {
+                        setAttendanceLogs(prev => [...prev, ...newLogs]);
+                        alert(`成功匯入 ${newLogs.length} 筆差勤/加班資料！已自動納入薪資試算。`);
+                    } else {
+                        alert("匯入失敗：請確認 CSV 檔案格式符合規範。");
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            };
+
+            // 處理新增員工
+            const handleAddEmployee = (e) => {
+                e.preventDefault();
+                if (!newEmp.id || !newEmp.name) {
+                    alert("請填寫工號與姓名！");
+                    return;
+                }
+                if (employees.some(emp => emp.id === newEmp.id)) {
+                    alert(`工號 ${newEmp.id} 已存在，請使用不同工號！`);
+                    return;
+                }
+
+                const empObj = {
+                    ...newEmp,
+                    baseSalary: Number(newEmp.baseSalary),
+                    mealAllowance: Number(newEmp.mealAllowance),
+                    positionAllowance: Number(newEmp.positionAllowance),
+                    bonus: Number(newEmp.bonus),
+                    laborGrade: Number(newEmp.laborGrade || newEmp.baseSalary),
+                    healthGrade: Number(newEmp.healthGrade || newEmp.baseSalary)
+                };
+
+                setEmployees([...employees, empObj]);
+                setShowAddModal(false);
+                setNewEmp({
+                    id: "", name: "", dept: "草圖設計部", title: "設計師",
+                    baseSalary: 42000, mealAllowance: 3000, positionAllowance: 2000, bonus: 0,
+                    laborGrade: 45800, healthGrade: 45800, bankAccount: "", onboardDate: "2026-09-01"
+                });
+                alert(`已成功新增員工：${empObj.name} (${empObj.id})`);
+            };
+
+            // 開啟編輯 Modal
+            const handleOpenEditModal = (emp) => {
+                setEditEmp({ ...emp });
+                setShowEditModal(true);
+            };
+
+            // 處理更新員工資料及薪資結構
+            const handleUpdateEmployee = (e) => {
+                e.preventDefault();
+                if (!editEmp) return;
+
+                const updatedObj = {
+                    ...editEmp,
+                    baseSalary: Number(editEmp.baseSalary),
+                    mealAllowance: Number(editEmp.mealAllowance),
+                    positionAllowance: Number(editEmp.positionAllowance),
+                    bonus: Number(editEmp.bonus),
+                    laborGrade: Number(editEmp.laborGrade),
+                    healthGrade: Number(editEmp.healthGrade)
+                };
+
+                setEmployees(employees.map(emp => emp.id === updatedObj.id ? updatedObj : emp));
+                setShowEditModal(false);
+                alert(`已成功更新 ${updatedObj.name} (${updatedObj.id}) 的薪資結構與個人資料！`);
+            };
+
+            // 處理刪除員工
+            const confirmDeleteEmployee = () => {
+                if (!empToDelete) return;
+                setEmployees(employees.filter(emp => emp.id !== empToDelete.id));
+                if (selectedEmpId === empToDelete.id) {
+                    const remaining = employees.filter(emp => emp.id !== empToDelete.id);
+                    if (remaining.length > 0) setSelectedEmpId(remaining[0].id);
+                }
+                setShowDeleteModal(false);
+                setEmpToDelete(null);
+            };
+
+            // 登入介面
+            if (!isLoggedIn) {
+                return (
+                    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-700">
+                            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-8 text-white text-center">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-2xl mb-4 backdrop-blur-md">
+                                    <i className="fa-solid fa-compass-drafting text-3xl text-blue-300"></i>
+                                </div>
+                                <h1 className="text-2xl font-bold tracking-wide">草圖設計工作室</h1>
+                                <p className="text-blue-200 text-sm mt-1">人事薪資與差勤管理系統 (勞基法合規)</p>
+                            </div>
+                            <form onSubmit={(e) => { e.preventDefault(); setIsLoggedIn(true); }} className="p-8 space-y-5">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">管理員帳號</label>
+                                    <div className="relative">
+                                        <i className="fa-solid fa-user absolute left-3 top-3.5 text-slate-400"></i>
+                                        <input 
+                                            type="text" 
+                                            value={loginForm.username}
+                                            onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 font-medium"
+                                            placeholder="請輸入帳號"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-600 uppercase mb-2">密碼</label>
+                                    <div className="relative">
+                                        <i className="fa-solid fa-lock absolute left-3 top-3.5 text-slate-400"></i>
+                                        <input 
+                                            type="password" 
+                                            value={loginForm.password}
+                                            onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                                            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-slate-800 font-medium"
+                                            placeholder="請輸入密碼"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-slate-500">
+                                    <label className="flex items-center cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="rounded text-blue-600 mr-2" /> 記住這台裝置
+                                    </label>
+                                    <a href="#" className="text-blue-600 hover:underline">忘記密碼？</a>
+                                </div>
+                                <button type="submit" className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2">
+                                    <i className="fa-solid fa-right-to-bracket"></i> 登入系統
+                                </button>
+                                <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                                    <span className="text-xs text-slate-400">系統預設管理者：admin / 密碼：123</span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
             }
 
-            if (editIndex >= 0) {
-                // 更新資料
-                employees[editIndex] = empData;
-            } else {
-                // 新增資料
-                employees.push(empData);
-            }
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row bg-slate-100">
+                    {/* 側邊導覽列 */}
+                    <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 no-print">
+                        <div className="p-6 border-b border-slate-800 flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-500/20">
+                                草
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-white leading-tight">草圖設計工作室</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">薪資管理系統 v2.5</p>
+                            </div>
+                        </div>
 
-            renderEmployees();
-            closeModal();
+                        {/* 使用者簡介 */}
+                        <div className="px-6 py-4 bg-slate-800/50 flex items-center justify-between border-b border-slate-800">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-indigo-500 text-white flex items-center justify-center font-semibold text-xs">
+                                    管
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold text-slate-200">{currentUser.name}</p>
+                                    <p className="text-[10px] text-emerald-400 font-medium">系統最高管理員</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsLoggedIn(false)} className="text-slate-400 hover:text-rose-400 text-sm" title="登出">
+                                <i className="fa-solid fa-power-off"></i>
+                            </button>
+                        </div>
+
+                        {/* 選單功能 */}
+                        <nav className="p-4 space-y-1.5 text-sm font-medium">
+                            <button 
+                                onClick={() => setCurrentTab("dashboard")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "dashboard" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-chart-pie w-5 text-center"></i> 系統總覽
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("salary")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "salary" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-file-invoice-dollar w-5 text-center"></i> 薪資明細總表
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("employees")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "employees" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-users w-5 text-center"></i> 員工名冊與管理
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("csvImport")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "csvImport" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-file-csv w-5 text-center"></i> 差勤 CSV 匯入
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("payslip")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "payslip" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-print w-5 text-center"></i> 正式薪資單列印
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("company")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "company" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-building w-5 text-center"></i> 公司資訊與發薪日
+                            </button>
+                            <button 
+                                onClick={() => setCurrentTab("laborLaw")} 
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${currentTab === "laborLaw" ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/30" : "hover:bg-slate-800 text-slate-400"}`}
+                            >
+                                <i className="fa-solid fa-scale-balanced w-5 text-center"></i> 勞基法計算規範
+                            </button>
+                        </nav>
+                    </aside>
+
+                    {/* 主要內容區塊 */}
+                    <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+                        {/* 頂部標題與功能條 */}
+                        <header className="bg-white border-b border-slate-200 px-8 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+                            <div>
+                                <h1 className="text-xl font-bold text-slate-800">
+                                    {currentTab === "dashboard" && "儀表板總覽"}
+                                    {currentTab === "salary" && "月度全體薪資統計明細表"}
+                                    {currentTab === "employees" && "員工名冊資料與權限管理"}
+                                    {currentTab === "csvImport" && "匯入差勤與加班 CSV 檔案"}
+                                    {currentTab === "payslip" && "發放與匯出正式薪資單 (勞基法第23條)"}
+                                    {currentTab === "company" && "公司參數與發薪設定"}
+                                    {currentTab === "laborLaw" && "勞動基準法對照說明"}
+                                </h1>
+                                <p className="text-xs text-slate-500 mt-0.5">計薪週期：{payPeriod} ｜ 預定發薪日：<span className="text-blue-600 font-semibold">{company.nextPayDate}</span></p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <button 
+                                    onClick={() => setShowAddModal(true)} 
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition"
+                                >
+                                    <i className="fa-solid fa-user-plus"></i> 新增員工
+                                </button>
+                                <button 
+                                    onClick={() => window.print()} 
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition"
+                                >
+                                    <i className="fa-solid fa-print"></i> 列印報表
+                                </button>
+                            </div>
+                        </header>
+
+                        <div className="p-8 space-y-8 flex-1">
+
+                            {/* TAB 1: 儀表板總覽 */}
+                            {currentTab === "dashboard" && (
+                                <div className="space-y-6">
+                                    {/* 4 大指標卡片 */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">本月預計應發薪資</span>
+                                                <span className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center"><i className="fa-solid fa-money-bill-wave"></i></span>
+                                            </div>
+                                            <p className="text-2xl font-black text-slate-800 mt-4">${salarySummary.grossTotal.toLocaleString()}</p>
+                                            <div className="mt-2 text-xs text-slate-500 flex items-center gap-1">
+                                                <i className="fa-solid fa-users text-blue-500"></i> 共 {salarySummary.empCount} 位員工
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">本月實發總金額</span>
+                                                <span className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i className="fa-solid fa-sack-dollar"></i></span>
+                                            </div>
+                                            <p className="text-2xl font-black text-emerald-600 mt-4">${salarySummary.netTotal.toLocaleString()}</p>
+                                            <div className="mt-2 text-xs text-slate-500">已扣除勞健保自負額與請假金額</div>
+                                        </div>
+
+                                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">加班費總支出</span>
+                                                <span className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center"><i className="fa-solid fa-stopwatch"></i></span>
+                                            </div>
+                                            <p className="text-2xl font-black text-amber-600 mt-4">${salarySummary.otTotal.toLocaleString()}</p>
+                                            <div className="mt-2 text-xs text-slate-500">依勞基法第24條倍率加算</div>
+                                        </div>
+
+                                        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">請假扣款統計</span>
+                                                <span className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center"><i className="fa-solid fa-calendar-xmark"></i></span>
+                                            </div>
+                                            <p className="text-2xl font-black text-rose-600 mt-4">${salarySummary.leaveDeductionTotal.toLocaleString()}</p>
+                                            <div className="mt-2 text-xs text-slate-500">事假全扣 / 病假生理假半扣</div>
+                                        </div>
+                                    </div>
+
+                                    {/* 快捷員工一覽表 */}
+                                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="font-bold text-slate-800 text-base">團隊員工概況</h3>
+                                            <button onClick={() => setCurrentTab("employees")} className="text-xs text-blue-600 hover:underline font-semibold">
+                                                管理全體員工 <i className="fa-solid fa-arrow-right ml-1"></i>
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {employees.map(emp => {
+                                                const calc = calculateSalary(emp);
+                                                return (
+                                                    <div key={emp.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:border-blue-200 transition">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-mono text-xs font-bold rounded">{emp.id}</span>
+                                                                <span className="font-bold text-slate-800">{emp.name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <button onClick={() => handleOpenEditModal(emp)} className="text-slate-400 hover:text-blue-600 text-xs px-1" title="編輯結構">
+                                                                    <i className="fa-solid fa-pen-to-square"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-slate-600 space-y-1">
+                                                            <div className="flex justify-between"><span>本薪底薪：</span><span className="font-semibold">${emp.baseSalary.toLocaleString()}</span></div>
+                                                            <div className="flex justify-between"><span>實領薪資：</span><span className="font-bold text-emerald-600">${calc.netPay.toLocaleString()}</span></div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 2: 全體薪資總表 */}
+                            {currentTab === "salary" && (
+                                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                                    <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <h3 className="font-bold text-slate-800">全體員工薪資統計表 ({payPeriod})</h3>
+                                            <p className="text-xs text-slate-500 mt-1">包含本薪、各項津貼、加班費及勞保健保自負額</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-semibold text-slate-600">計薪月份：</span>
+                                            <input 
+                                                type="month" 
+                                                value={payPeriod} 
+                                                onChange={(e) => setPayPeriod(e.target.value)}
+                                                className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs text-slate-600">
+                                            <thead className="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
+                                                <tr>
+                                                    <th className="px-4 py-3">工號 / 姓名</th>
+                                                    <th className="px-4 py-3">部門 / 職稱</th>
+                                                    <th className="px-4 py-3 text-right">固定底薪</th>
+                                                    <th className="px-4 py-3 text-right">伙食/職務津貼</th>
+                                                    <th className="px-4 py-3 text-right">加班費</th>
+                                                    <th className="px-4 py-3 text-right text-rose-600">請假扣款</th>
+                                                    <th className="px-4 py-3 text-right">應發小計</th>
+                                                    <th className="px-4 py-3 text-right text-amber-700">勞健保自負</th>
+                                                    <th className="px-4 py-3 text-right font-bold text-emerald-700">實領薪資</th>
+                                                    <th className="px-4 py-3 text-center">操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 font-medium">
+                                                {employees.map(emp => {
+                                                    const calc = calculateSalary(emp);
+                                                    return (
+                                                        <tr key={emp.id} className="hover:bg-blue-50/50 transition">
+                                                            <td className="px-4 py-3">
+                                                                <span className="font-mono font-bold text-blue-600 mr-2">{emp.id}</span>
+                                                                <span className="font-bold text-slate-800">{emp.name}</span>
+                                                            </td>
+                                                            <td className="px-4 py-3">{emp.dept} / {emp.title}</td>
+                                                            <td className="px-4 py-3 text-right font-mono">${emp.baseSalary.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono">${(emp.mealAllowance + emp.positionAllowance).toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono text-amber-600">+${calc.totalOvertimeFee.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono text-rose-600">-${calc.totalLeaveDeduction.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono font-bold text-slate-800">${calc.totalGross.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono text-amber-700">-${(calc.laborSelf + calc.healthSelf).toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-right font-mono text-sm font-black text-emerald-600">${calc.netPay.toLocaleString()}</td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                <div className="flex items-center justify-center gap-1.5">
+                                                                    <button 
+                                                                        onClick={() => handleOpenEditModal(emp)} 
+                                                                        className="px-2 py-1 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded font-semibold text-[11px]"
+                                                                        title="編輯員工與薪資"
+                                                                    >
+                                                                        <i className="fa-solid fa-pen-to-square"></i> 編輯
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => { setSelectedEmpId(emp.id); setCurrentTab("payslip"); }} 
+                                                                        className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded font-semibold text-[11px]"
+                                                                    >
+                                                                        薪資單
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => { setEmpToDelete(emp); setShowDeleteModal(true); }}
+                                                                        className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                                                                        title="刪除員工"
+                                                                    >
+                                                                        <i className="fa-solid fa-trash-can"></i>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 3: 員工名冊與新增/編輯/刪除管理 */}
+                            {currentTab === "employees" && (
+                                <div className="space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-base font-bold text-slate-800">全體員工清單 ({employees.length} 位)</h3>
+                                        <button 
+                                            onClick={() => setShowAddModal(true)} 
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md flex items-center gap-2"
+                                        >
+                                            <i className="fa-solid fa-plus"></i> 新增員工資料
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {employees.map(emp => (
+                                            <div key={emp.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition relative">
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-700 font-mono text-xs font-bold rounded-lg">
+                                                            {emp.id}
+                                                        </span>
+                                                        <h4 className="text-lg font-bold text-slate-800 mt-2">{emp.name}</h4>
+                                                        <p className="text-xs text-slate-500">{emp.dept} ｜ {emp.title}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <button 
+                                                            onClick={() => handleOpenEditModal(emp)}
+                                                            className="w-8 h-8 rounded-full hover:bg-amber-50 text-slate-400 hover:text-amber-600 flex items-center justify-center transition"
+                                                            title="編輯員工與薪資結構"
+                                                        >
+                                                            <i className="fa-solid fa-pen-to-square text-sm"></i>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => { setEmpToDelete(emp); setShowDeleteModal(true); }}
+                                                            className="w-8 h-8 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition"
+                                                            title="刪除員工"
+                                                        >
+                                                            <i className="fa-solid fa-trash-can text-sm"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 pt-4 border-t border-slate-100 space-y-2 text-xs">
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>本薪 (底薪)：</span>
+                                                        <span className="font-bold text-slate-800 font-mono">${emp.baseSalary.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>伙食津貼：</span>
+                                                        <span className="font-mono">${emp.mealAllowance.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>職務津貼：</span>
+                                                        <span className="font-mono">${emp.positionAllowance.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>固定獎金：</span>
+                                                        <span className="font-mono">${emp.bonus.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>勞健保投保級距：</span>
+                                                        <span className="font-mono">${emp.laborGrade.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>到職日期：</span>
+                                                        <span className="text-slate-700 font-mono">{emp.onboardDate}</span>
+                                                    </div>
+                                                    <div className="flex justify-between text-slate-600">
+                                                        <span>銀行帳戶：</span>
+                                                        <span className="text-slate-700 font-mono">{emp.bankAccount || "未填寫"}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 4: CSV 匯入 */}
+                            {currentTab === "csvImport" && (
+                                <div className="space-y-6">
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm">
+                                        <h3 className="text-base font-bold text-slate-800 mb-2">上傳差勤與請假/加班 CSV 檔案</h3>
+                                        <p className="text-xs text-slate-500 mb-6">
+                                            支援相容《全體差勤薪資明細總表_草圖設計工作室.csv》。系統將自動對應員工工號，精確扣除請假款項並核算加班費。
+                                        </p>
+
+                                        <div className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-10 text-center bg-slate-50 hover:bg-blue-50/30 transition cursor-pointer relative">
+                                            <input 
+                                                type="file" 
+                                                accept=".csv" 
+                                                onChange={handleFileUpload}
+                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                            />
+                                            <i className="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
+                                            <p className="text-sm font-bold text-slate-700">點擊上傳或拖曳 CSV 檔案至此</p>
+                                            <p className="text-xs text-slate-400 mt-1">格式必須包含：工號、姓名、類別、項目、時數、狀態</p>
+                                        </div>
+                                    </div>
+
+                                    {/* 匯入紀錄清單 */}
+                                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                                        <h4 className="font-bold text-slate-800 text-sm mb-4">當前已對應之差勤明細 ({attendanceLogs.length} 筆)</h4>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-50 text-slate-600 uppercase font-bold border-b border-slate-200">
+                                                    <tr>
+                                                        <th className="px-4 py-2.5">工號 / 姓名</th>
+                                                        <th className="px-4 py-2.5">類別</th>
+                                                        <th className="px-4 py-2.5">項目</th>
+                                                        <th className="px-4 py-2.5">時數</th>
+                                                        <th className="px-4 py-2.5">事由</th>
+                                                        <th className="px-4 py-2.5">狀態</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 font-medium">
+                                                    {attendanceLogs.map((log, idx) => (
+                                                        <tr key={idx} className="hover:bg-slate-50">
+                                                            <td className="px-4 py-2.5">
+                                                                <span className="font-mono font-bold text-blue-600 mr-2">{log.empId}</span>
+                                                                <span>{log.empName}</span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${log.category === "請假" ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"}`}>
+                                                                    {log.category}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-2.5 font-bold text-slate-700">{log.item}</td>
+                                                            <td className="px-4 py-2.5 font-mono">{log.hours} 小時</td>
+                                                            <td className="px-4 py-2.5 text-slate-500">{log.reason || "-"}</td>
+                                                            <td className="px-4 py-2.5">
+                                                                <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold">{log.status}</span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 5: 正式薪資單 */}
+                            {currentTab === "payslip" && (
+                                <div className="space-y-6">
+                                    {/* 選擇員工 */}
+                                    <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-slate-600">選擇員工薪資單：</span>
+                                            <select 
+                                                value={selectedEmpId} 
+                                                onChange={(e) => setSelectedEmpId(e.target.value)}
+                                                className="px-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                {employees.map(emp => (
+                                                    <option key={emp.id} value={emp.id}>{emp.id} - {emp.name} ({emp.dept})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={() => window.print()} 
+                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md flex items-center gap-2"
+                                            >
+                                                <i className="fa-solid fa-print"></i> 列印 / 匯出單張薪資單 (PDF)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 薪資單渲染頁面 */}
+                                    {(() => {
+                                        const emp = employees.find(e => e.id === selectedEmpId) || employees[0];
+                                        if (!emp) return null;
+                                        const calc = calculateSalary(emp);
+
+                                        return (
+                                            <div className="bg-white rounded-2xl border border-slate-300 p-8 shadow-lg max-w-4xl mx-auto print-page text-slate-800">
+                                                {/* 頁眉抬頭 */}
+                                                <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-end">
+                                                    <div>
+                                                        <h2 className="text-2xl font-black text-slate-900 tracking-wider">{company.name}</h2>
+                                                        <p className="text-xs text-slate-500 mt-1">正式員工薪資給付明細表（符合勞動基準法第23條規範）</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="px-3 py-1 bg-slate-100 font-mono text-xs font-bold rounded border border-slate-300">計薪年月：{payPeriod}</span>
+                                                        <p className="text-xs text-slate-500 mt-1">預定發薪日：{company.nextPayDate}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* 員工基本資料欄 */}
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 text-xs">
+                                                    <div><span className="text-slate-400">員工工號：</span><span className="font-mono font-bold">{emp.id}</span></div>
+                                                    <div><span className="text-slate-400">員工姓名：</span><span className="font-bold">{emp.name}</span></div>
+                                                    <div><span className="text-slate-400">所屬部門：</span><span>{emp.dept}</span></div>
+                                                    <div><span className="text-slate-400">職務名稱：</span><span>{emp.title}</span></div>
+                                                    <div><span className="text-slate-400">時薪計算基準：</span><span className="font-mono font-bold">${calc.hourlyRate}/小時</span></div>
+                                                    <div><span className="text-slate-400">轉帳帳戶：</span><span className="font-mono">{emp.bankAccount || "現金發放"}</span></div>
+                                                </div>
+
+                                                {/* 應發與應扣兩欄明細 */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                                    {/* 左欄：應發項目 */}
+                                                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                                        <div className="bg-emerald-50 text-emerald-800 font-bold px-4 py-2.5 text-xs border-b border-slate-200 flex justify-between">
+                                                            <span>【應發項目 (A)】</span>
+                                                            <span>金額 (NT$)</span>
+                                                        </div>
+                                                        <div className="p-4 space-y-2.5 text-xs">
+                                                            <div className="flex justify-between"><span>本薪 (底薪)</span><span className="font-mono">${emp.baseSalary.toLocaleString()}</span></div>
+                                                            <div className="flex justify-between"><span>伙食津貼</span><span className="font-mono">${emp.mealAllowance.toLocaleString()}</span></div>
+                                                            <div className="flex justify-between"><span>職務津貼</span><span className="font-mono">${emp.positionAllowance.toLocaleString()}</span></div>
+                                                            {emp.bonus > 0 && <div className="flex justify-between"><span>獎金/其他補助</span><span className="font-mono">${emp.bonus.toLocaleString()}</span></div>}
+                                                            {calc.otWeekdayFee > 0 && <div className="flex justify-between text-amber-700"><span>平日加班費</span><span className="font-mono">+${calc.otWeekdayFee.toLocaleString()}</span></div>}
+                                                            {calc.otRestdayFee > 0 && <div className="flex justify-between text-amber-700"><span>休息日加班費</span><span className="font-mono">+${calc.otRestdayFee.toLocaleString()}</span></div>}
+                                                            <div className="pt-3 border-t border-slate-200 flex justify-between font-bold text-sm text-emerald-700">
+                                                                <span>應發總計</span>
+                                                                <span className="font-mono">${calc.totalGross.toLocaleString()}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* 右欄：應扣項目 */}
+                                                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                                                        <div className="bg-rose-50 text-rose-800 font-bold px-4 py-2.5 text-xs border-b border-slate-200 flex justify-between">
+                                                            <span>【應扣項目 (B)】</span>
+                                                            <span>金額 (NT$)</span>
+                                                        </div>
+                                                        <div className="p-4 space-y-2.5 text-xs">
+                                                            <div className="flex justify-between"><span>勞保費 (個人自負 20%)</span><span className="font-mono">-${calc.laborSelf.toLocaleString()}</span></div>
+                                                            <div className="flex justify-between"><span>健保費 (個人自負 30%)</span><span className="font-mono">-${calc.healthSelf.toLocaleString()}</span></div>
+                                                            {calc.unpaidDeduction > 0 && <div className="flex justify-between text-rose-600"><span>事假扣款 ({calc.att.unpaidLeaveHours}小時)</span><span className="font-mono">-${calc.unpaidDeduction.toLocaleString()}</span></div>}
+                                                            {calc.halfPaidDeduction > 0 && <div className="flex justify-between text-rose-600"><span>病假/生理假扣款 ({calc.att.halfPaidLeaveHours}小時)</span><span className="font-mono">-${calc.halfPaidDeduction.toLocaleString()}</span></div>}
+                                                            <div className="pt-3 border-t border-slate-200 flex justify-between font-bold text-sm text-rose-700">
+                                                                <span>應扣總計</span>
+                                                                <span className="font-mono">-${calc.totalDeductions.toLocaleString()}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 實領金額大字卡 */}
+                                                <div className="bg-slate-900 text-white p-5 rounded-xl flex items-center justify-between mb-6 shadow-md">
+                                                    <div>
+                                                        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">實領總計 Net Pay (A - B)</span>
+                                                        <p className="text-xs text-slate-400 mt-0.5">已由公司會計部核算完畢</p>
+                                                    </div>
+                                                    <div className="text-3xl font-black font-mono text-emerald-400">
+                                                        ${calc.netPay.toLocaleString()}
+                                                    </div>
+                                                </div>
+
+                                                {/* 勞退提繳與蓋章簽收區 */}
+                                                <div className="grid grid-cols-2 gap-6 text-xs pt-4 border-t border-slate-200">
+                                                    <div className="space-y-1 text-slate-500">
+                                                        <p><strong>雇主負擔與勞退提繳資訊：</strong></p>
+                                                        <p>• 雇主依法強制提繳 6% 勞工退休金：<span className="font-mono font-bold text-slate-800">${calc.laborPensionCompany.toLocaleString()}</span> (由公司逕繳勞保局，不自薪資扣除)</p>
+                                                        <p>• 勞保投保級距：${emp.laborGrade.toLocaleString()} ｜ 健保投保級距：${emp.healthGrade.toLocaleString()}</p>
+                                                    </div>
+                                                    <div className="flex justify-around items-end pt-4">
+                                                        <div className="text-center">
+                                                            <div className="w-24 border-b border-slate-400 mb-1"></div>
+                                                            <span className="text-[10px] text-slate-400">製表 / 審核人蓋章</span>
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <div className="w-24 border-b border-slate-400 mb-1"></div>
+                                                            <span className="text-[10px] text-slate-400">員工簽收章 (或電郵核對)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* TAB 6: 公司資訊與參數 */}
+                            {currentTab === "company" && (
+                                <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm max-w-3xl space-y-6">
+                                    <h3 className="text-base font-bold text-slate-800 pb-4 border-b border-slate-200">公司基本資料與薪資參數設定</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-2">公司名稱</label>
+                                            <input type="text" value={company.name} onChange={(e)=>setCompany({...company, name: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-800 font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-2">統一編號</label>
+                                            <input type="text" value={company.taxId} onChange={(e)=>setCompany({...company, taxId: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-2">預定每月發薪日</label>
+                                            <input type="text" value={company.nextPayDate} onChange={(e)=>setCompany({...company, nextPayDate: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-semibold text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-semibold text-slate-700 mb-2">月工裝時數 (勞基法基準)</label>
+                                            <input type="number" value={company.baseHours} onChange={(e)=>setCompany({...company, baseHours: Number(e.target.value)})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-100 flex justify-end">
+                                        <button onClick={()=>alert("公司參數已成功儲存！")} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md">
+                                            儲存變更
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 7: 勞基法法規說明 */}
+                            {currentTab === "laborLaw" && (
+                                <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 text-xs text-slate-700">
+                                    <h3 className="text-base font-bold text-slate-900 border-b border-slate-200 pb-3">中華民國《勞動基準法》薪資計算條文說明</h3>
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <h4 className="font-bold text-slate-900 text-sm mb-1">1. 平日加班費計算 (第 24 條)</h4>
+                                            <p className="text-slate-600">延長工作時間在兩小時小時以內者，按平日每小時工資額加給三分之一 (1.34) 以上；再延長工作時間在兩小時以內者，按平日每小時工資額加給三分之二 (1.67) 以上。</p>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <h4 className="font-bold text-slate-900 text-sm mb-1">2. 請假扣款規範 (勞工請假規則)</h4>
+                                            <p className="text-slate-600"><strong>事假：</strong>一年內不得超過 14 日，期間不給工資 (扣除 100% 日薪)。<br/><strong>普通傷病假：</strong>一年內未超過 30 日部分，工資折半發給 (扣除 50% 日薪)。</p>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                            <h4 className="font-bold text-slate-900 text-sm mb-1">3. 薪資明細發放義務 (第 23 條)</h4>
+                                            <p className="text-slate-600">雇主應提供勞工工資各項目計算明細（薪資單），內容應包含工資總額、各項給付、扣繳項目及實領金額。</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </main>
+
+                    {/* 模態視窗 1：新增員工 Modal */}
+                    {showAddModal && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200">
+                                <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                                    <h3 className="font-bold text-base"><i className="fa-solid fa-user-plus text-blue-400 mr-2"></i> 新增員工資料</h3>
+                                    <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleAddEmployee} className="p-6 space-y-4 text-xs">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">員工工號 *</label>
+                                            <input type="text" required placeholder="例如: T915" value={newEmp.id} onChange={(e)=>setNewEmp({...newEmp, id: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">員工姓名 *</label>
+                                            <input type="text" required placeholder="例如: 張小明" value={newEmp.name} onChange={(e)=>setNewEmp({...newEmp, name: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">部門</label>
+                                            <input type="text" value={newEmp.dept} onChange={(e)=>setNewEmp({...newEmp, dept: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">職稱</label>
+                                            <input type="text" value={newEmp.title} onChange={(e)=>setNewEmp({...newEmp, title: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">本薪 (底薪 NT$) *</label>
+                                            <input type="number" required value={newEmp.baseSalary} onChange={(e)=>setNewEmp({...newEmp, baseSalary: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">伙食津貼 (NT$)</label>
+                                            <input type="number" value={newEmp.mealAllowance} onChange={(e)=>setNewEmp({...newEmp, mealAllowance: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">職務津貼 (NT$)</label>
+                                            <input type="number" value={newEmp.positionAllowance} onChange={(e)=>setNewEmp({...newEmp, positionAllowance: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">勞保/健保投保級距 (NT$)</label>
+                                            <input type="number" value={newEmp.laborGrade} onChange={(e)=>setNewEmp({...newEmp, laborGrade: e.target.value, healthGrade: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block font-bold text-slate-700 mb-1">轉帳銀行帳號</label>
+                                            <input type="text" placeholder="例如: 822-123456789" value={newEmp.bankAccount} onChange={(e)=>setNewEmp({...newEmp, bankAccount: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                                        <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-lg">取消</button>
+                                        <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md">確認新增</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 模態視窗 2：編輯員工及薪資結構 Modal */}
+                    {showEditModal && editEmp && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200">
+                                <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                                    <h3 className="font-bold text-base"><i className="fa-solid fa-pen-to-square text-amber-400 mr-2"></i> 編輯員工及薪資結構 - {editEmp.name} ({editEmp.id})</h3>
+                                    <button onClick={() => setShowEditModal(false)} className="text-slate-400 hover:text-white"><i className="fa-solid fa-xmark text-lg"></i></button>
+                                </div>
+                                <form onSubmit={handleUpdateEmployee} className="p-6 space-y-4 text-xs">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">員工工號 (不可修改)</label>
+                                            <input type="text" disabled value={editEmp.id} className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg font-mono font-bold text-slate-500 cursor-not-allowed" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">員工姓名 *</label>
+                                            <input type="text" required value={editEmp.name} onChange={(e)=>setEditEmp({...editEmp, name: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">部門</label>
+                                            <input type="text" value={editEmp.dept} onChange={(e)=>setEditEmp({...editEmp, dept: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">職稱</label>
+                                            <input type="text" value={editEmp.title} onChange={(e)=>setEditEmp({...editEmp, title: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">本薪 (底薪 NT$) *</label>
+                                            <input type="number" required value={editEmp.baseSalary} onChange={(e)=>setEditEmp({...editEmp, baseSalary: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono font-bold text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">伙食津貼 (NT$)</label>
+                                            <input type="number" value={editEmp.mealAllowance} onChange={(e)=>setEditEmp({...editEmp, mealAllowance: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">職務津貼 (NT$)</label>
+                                            <input type="number" value={editEmp.positionAllowance} onChange={(e)=>setEditEmp({...editEmp, positionAllowance: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">固定獎金 (NT$)</label>
+                                            <input type="number" value={editEmp.bonus} onChange={(e)=>setEditEmp({...editEmp, bonus: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">勞保投保級距 (NT$)</label>
+                                            <input type="number" value={editEmp.laborGrade} onChange={(e)=>setEditEmp({...editEmp, laborGrade: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div>
+                                            <label className="block font-bold text-slate-700 mb-1">健保投保級距 (NT$)</label>
+                                            <input type="number" value={editEmp.healthGrade} onChange={(e)=>setEditEmp({...editEmp, healthGrade: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block font-bold text-slate-700 mb-1">轉帳銀行帳號</label>
+                                            <input type="text" value={editEmp.bankAccount} onChange={(e)=>setEditEmp({...editEmp, bankAccount: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg font-mono" />
+                                        </div>
+                                    </div>
+                                    <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
+                                        <button type="button" onClick={() => setShowEditModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-lg">取消</button>
+                                        <button type="submit" className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-md">儲存變更</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 模態視窗 3：確認刪除 Modal */}
+                    {showDeleteModal && empToDelete && (
+                        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 p-6 space-y-4 text-center">
+                                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                                    <i className="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <h3 className="text-base font-bold text-slate-800">確定要刪除該位員工？</h3>
+                                <p className="text-xs text-slate-500">
+                                    您即將刪除 <span className="font-bold text-slate-800">{empToDelete.name} ({empToDelete.id})</span> 的個人資料與薪資明細。此操作無法復原。
+                                </p>
+                                <div className="pt-4 flex justify-center gap-3">
+                                    <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg">取消</button>
+                                    <button onClick={confirmDeleteEmployee} className="px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow-md">確認刪除</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
         }
 
-        // 刪除員工
-        function deleteEmployee(index) {
-            const emp = employees[index];
-            if (confirm(`確定要刪除員工「${emp.name} (${emp.id})」的所有資料與薪資帳戶嗎？`)) {
-                employees.splice(index, 1);
-                renderEmployees();
-            }
-        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
