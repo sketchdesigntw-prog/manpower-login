@@ -3,224 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設計公司 - 員工與勞動法規管理系統</title>
+    <title>極致創藝設計股份有限公司 - 人力資源與勞動法規管理系統</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .active-tab {
-            border-bottom: 2px solid #3b82f6;
-            color: #3b82f6;
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
             font-weight: 600;
+            background-color: #eff6ff;
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans antialiased">
 
-    <!-- Header Navigation -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center gap-3">
-                    <div class="bg-blue-600 text-white p-2 rounded-lg font-bold">Design Studio</div>
-                    <h1 class="text-xl font-bold text-slate-800">人事與勞動法規管理系統</h1>
+    <!-- 1. 登入視窗 (預設顯示) -->
+    <div id="login-overlay" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100">
+            <div class="bg-slate-900 text-white p-8 text-center relative">
+                <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl mx-auto mb-3 shadow-lg shadow-blue-500/30">
+                    A
                 </div>
-                <span class="text-xs bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200">內部管理專用</span>
+                <h2 class="text-xl font-bold tracking-wide">極致創藝設計股份有限公司</h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider">Apex Design Co., Ltd. - Enterprise HR Portal</p>
             </div>
-            <!-- Navigation Tabs -->
-            <nav class="flex space-x-8 mt-2 overflow-x-auto" id="tabs">
-                <button onclick="switchTab('employees')" id="tab-employees" class="py-3 px-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700 active-tab">
-                    👥 員工管理
+            
+            <form onsubmit="handleLogin(event)" class="p-8 space-y-5">
+                <div id="login-error" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-xs px-4 py-3 rounded-lg font-medium">
+                    ⚠️ 帳號或密碼錯誤，請重新輸入。
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">管理者帳號</label>
+                    <input type="text" id="login-username" required placeholder="請輸入管理者帳號" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-2">密碼</label>
+                    <input type="password" id="login-password" required placeholder="請輸入密碼" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg shadow-lg shadow-blue-600/20 text-sm transition">
+                    安全登入系統
                 </button>
-                <button onclick="switchTab('contract')" id="tab-contract" class="py-3 px-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
-                    📄 勞動契約管理
-                </button>
-                <button onclick="switchTab('leave')" id="tab-leave" class="py-3 px-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
-                    🏖️ 勞基法請假與特別休假規定
-                </button>
-                <button onclick="switchTab('rules')" id="tab-rules" class="py-3 px-1 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-700">
-                    📐 設計公司工作守則
-                </button>
-            </nav>
+                <div class="text-center text-xs text-slate-400 pt-2">
+                    💡 預設測試帳號：<span class="font-mono text-slate-600 font-bold">admin</span> / 密碼：<span class="font-mono text-slate-600 font-bold">admin123</span>
+                </div>
+            </form>
         </div>
-    </header>
+    </div>
 
-    <!-- Main Content Area -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        <!-- 1. 員工管理頁面 (新增與刪除功能) -->
-        <section id="page-employees" class="tab-page space-y-6">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                <div>
-                    <h2 class="text-lg font-bold text-slate-900">員工名冊管理</h2>
-                    <p class="text-sm text-slate-500">管理員可在此新增員工資料或進行人員離職/刪除處置。</p>
-                </div>
-                <button onclick="toggleModal(true)" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 shadow">
-                    <span>+</span> 新增員工
-                </button>
-            </div>
-
-            <!-- Employee Table -->
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-600">
-                        <thead class="bg-slate-50 text-slate-700 border-b border-slate-200 font-semibold">
-                            <tr>
-                                <th class="px-6 py-4">工號</th>
-                                <th class="px-6 py-4">姓名</th>
-                                <th class="px-6 py-4">部門</th>
-                                <th class="px-6 py-4">職稱</th>
-                                <th class="px-6 py-4">到職日</th>
-                                <th class="px-6 py-4 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="employee-list" class="divide-y divide-slate-200">
-                            <!-- Javascript 動態帶入 -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- 2. 勞動契約管理頁面 -->
-        <section id="page-contract" class="tab-page hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 border-slate-100">定期與不定期勞動契約範本</h2>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <h3 class="font-bold text-slate-800 mb-2">一、 工作內容與地點</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">
-                            受僱人同意接受公司之指揮監督，執行設計專案規劃、視覺美工、客戶對接及其他相關主管交辦事項。工作地點以公司登記地為主，必要時配合專案進行外勤或現場監工。
-                        </p>
+    <!-- 2. 主系統介面 (預設隱藏) -->
+    <div id="app-container" class="hidden">
+        <!-- Top Navbar -->
+        <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-blue-600 text-white w-9 h-9 rounded-lg font-black text-lg flex items-center justify-center">A</div>
+                        <div>
+                            <h1 class="text-base font-bold leading-none">極致創藝設計股份有限公司</h1>
+                            <span class="text-[10px] text-slate-400 uppercase tracking-wider">HR & Legal Compliance Portal</span>
+                        </div>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <h3 class="font-bold text-slate-800 mb-2">二、 工作時間與休息</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">
-                            每日正常工作時間為 8 小時，每週正常工作時間總數為 40 小時。午休時間為 12:30 - 13:30。延長工作時間（加班）須事前依公司規定辦理申請程序。
-                        </p>
-                    </div>
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <h3 class="font-bold text-slate-800 mb-2">三、 薪資與發放</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">
-                            每月薪資按月計給，於次月 5 日以前發放（逢例假日順延）。公司依規定為員工投保勞工保險、職業災害保險、全民健康保險，並依法提繳勞工退休金。
-                        </p>
-                    </div>
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <h3 class="font-bold text-slate-800 mb-2">四、 智慧財產權與保密義務</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">
-                            員工於任職期間職務上所完成之設計著作、圖像及專案成果，其著作財產權完全歸屬於公司所有。員工未經授權不得洩漏公司客戶資料及專案機密。
-                        </p>
+                    
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
+                            <div class="w-2 h-2 rounded-full bg-emerald-400"></div>
+                            <span class="text-xs text-slate-200 font-medium" id="user-display">系統管理員</span>
+                        </div>
+                        <button onclick="handleLogout()" class="text-xs bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition border border-slate-700 hover:border-transparent">
+                            登出
+                        </button>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <!-- 3. 請假與特休規定 (依勞基法) -->
-        <section id="page-leave" class="tab-page hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
-                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 border-slate-100">勞動基準法假別與特別休假規定</h2>
+            <!-- Tab Navigation -->
+            <div class="bg-slate-800 border-t border-slate-700/50">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <nav class="flex space-x-1 overflow-x-auto text-xs sm:text-sm font-medium" id="tabs">
+                        <button onclick="switchTab('employees')" id="tab-employees" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition active-tab">
+                            👥 員工與薪資帳戶管理
+                        </button>
+                        <button onclick="switchTab('contract')" id="tab-contract" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
+                            📄 勞動契約管理
+                        </button>
+                        <button onclick="switchTab('leave')" id="tab-leave" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
+                            🏖️ 勞基法休假規定
+                        </button>
+                        <button onclick="switchTab('rules')" id="tab-rules" class="py-3 px-4 text-slate-300 hover:text-white rounded-t-lg transition">
+                            📐 設計公司工作守則
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+            <!-- 1. 員工與薪資帳戶管理頁面 -->
+            <section id="page-employees" class="tab-page space-y-6">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">員工名冊與薪資帳戶管理</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">可在此維護員工個資、職稱、離到職狀況與撥薪銀行帳號資訊。</p>
+                    </div>
+                    <button onclick="openEmployeeModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
+                        <span>+</span> 新增員工資料
+                    </button>
+                </div>
+
+                <!-- 員工表格 -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-slate-600">
+                            <thead class="bg-slate-50/80 text-slate-700 border-b border-slate-200 text-xs font-bold uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-6 py-4">工號</th>
+                                    <th class="px-6 py-4">姓名</th>
+                                    <th class="px-6 py-4">部門 / 職稱</th>
+                                    <th class="px-6 py-4">到職日</th>
+                                    <th class="px-6 py-4">薪資帳戶資訊</th>
+                                    <th class="px-6 py-4 text-center">管理動作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-list" class="divide-y divide-slate-100">
+                                <!-- JavaScript 動態渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 勞動契約管理 -->
+            <section id="page-contract" class="tab-page hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-xl font-bold text-slate-900">極致創藝設計股份有限公司 - 勞動契約條款範本</h2>
+                        <p class="text-xs text-slate-500 mt-1">適用於不定期勞動契約，符合台灣勞動基準法規範</p>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
+                            <h3 class="font-bold text-slate-800 text-sm">一、 工作內容與服務地點</h3>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                受僱人同意接受公司之指揮監督，執行設計專案、視覺美工、客戶對接及其他交辦事項。工作地點為公司登記地址或專案指定地點。
+                            </p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
+                            <h3 class="font-bold text-slate-800 text-sm">二、 工作時間與休息</h3>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                每日正常工作時間為 8 小時（09:30 - 18:30），午休 12:30 - 13:30。採雙週/四週變形工時，加班需事前完成系統申請程序。
+                            </p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
+                            <h3 class="font-bold text-slate-800 text-sm">三、 薪資發放與指定帳戶</h3>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                薪資於每月 5 日匯入員工提供之金融機構轉帳帳戶（逢假日順延）。公司依法投保勞健保、職災保險並按月提繳 6% 勞工退休金。
+                            </p>
+                        </div>
+                        <div class="p-5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-2">
+                            <h3 class="font-bold text-slate-800 text-sm">四、 智慧財產權與專案保密</h3>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                員工於任職期間職務上完成之設計著作，其智慧財產權完全歸屬公司所有。未經許可不得私自複製、攜出專案資產與客戶資料。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 請假與特休規定 -->
+            <section id="page-leave" class="tab-page hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-xl font-bold text-slate-900">勞動基準法假別與特別休假標準</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <h3 class="font-bold text-sm text-blue-600 flex items-center gap-1.5">📌 法定特別休假天數表（勞基法第38條）</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                <div class="text-slate-500 text-xs">6 個月以上未滿 1 年</div>
+                                <div class="text-xl font-black text-blue-600 mt-1">3 天</div>
+                            </div>
+                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                <div class="text-slate-500 text-xs">1 年以上未滿 2 年</div>
+                                <div class="text-xl font-black text-blue-600 mt-1">7 天</div>
+                            </div>
+                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                <div class="text-slate-500 text-xs">2 年以上未滿 3 年</div>
+                                <div class="text-xl font-black text-blue-600 mt-1">10 天</div>
+                            </div>
+                            <div class="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                <div class="text-slate-500 text-xs">3 年以上未滿 5 年</div>
+                                <div class="text-xl font-black text-blue-600 mt-1">14 天 / 年</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 pt-4">
+                        <h3 class="font-bold text-sm text-slate-800">📌 常見假別與給薪基準</h3>
+                        <div class="grid md:grid-cols-2 gap-4 text-xs">
+                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
+                                <span class="font-bold text-slate-800">普通傷病假：</span>未住院一年內 30 日內半薪，超越部分不給薪。
+                            </div>
+                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
+                                <span class="font-bold text-slate-800">事假：</span>一年內最高 14 日，期間不給工資。
+                            </div>
+                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
+                                <span class="font-bold text-slate-800">婚假：</span>給予 8 日，工資照給。
+                            </div>
+                            <div class="border border-slate-200/80 p-4 rounded-xl bg-slate-50/30">
+                                <span class="font-bold text-slate-800">喪假：</span>父母、配偶喪亡給予 8 日，工資照給。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 工作守則 -->
+            <section id="page-rules" class="tab-page hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+                    <div class="border-b border-slate-100 pb-4">
+                        <h2 class="text-xl font-bold text-slate-900">極致創藝設計 - 工作守則規範</h2>
+                    </div>
+                    <div class="space-y-4 text-xs text-slate-600">
+                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
+                            <h3 class="font-bold text-slate-800 text-sm">1. 設計資產與檔案雲端同步</h3>
+                            <p class="leading-relaxed">所有專案檔（AI, PSD, Figma）每日下班前須同步至企業雲端硬碟，禁止私存於個人外接裝置。</p>
+                        </div>
+                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
+                            <h3 class="font-bold text-slate-800 text-sm">2. 商業字型與素材授權規章</h3>
+                            <p class="leading-relaxed">專案必須使用公司採購之合法授權商用圖庫與字體，嚴禁使用侵權素材。</p>
+                        </div>
+                        <div class="border-l-4 border-blue-600 pl-4 py-1 space-y-1">
+                            <h3 class="font-bold text-slate-800 text-sm">3. 專案交付與專案管理規程</h3>
+                            <p class="leading-relaxed">設計師應遵守 PM 制定之排程，若遇到客戶重大修正導致延誤，需於 24 小時內通報。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- 3. 新增 / 編輯員工彈出視窗 Modal -->
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8 overflow-hidden border border-slate-100">
+            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="font-bold text-base" id="modal-title">新增員工資料</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition text-lg">✕</button>
+            </div>
+            
+            <form id="employee-form" onsubmit="handleFormSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-index" value="-1">
                 
-                <!-- 特休表 -->
-                <div class="space-y-3">
-                    <h3 class="font-bold text-blue-600">📌 特別休假法定天數（勞基法第38條）</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-sm">
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <div class="text-slate-500 text-xs">6 個月以上未滿 1 年</div>
-                            <div class="text-lg font-bold text-blue-700 mt-1">3 天</div>
-                        </div>
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <div class="text-slate-500 text-xs">1 年以上未滿 2 年</div>
-                            <div class="text-lg font-bold text-blue-700 mt-1">7 天</div>
-                        </div>
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <div class="text-slate-500 text-xs">2 年以上未滿 3 年</div>
-                            <div class="text-lg font-bold text-blue-700 mt-1">10 天</div>
-                        </div>
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <div class="text-slate-500 text-xs">3 年以上未滿 5 年</div>
-                            <div class="text-lg font-bold text-blue-700 mt-1">14 天 / 年</div>
-                        </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">員工工號 *</label>
+                        <input type="text" id="emp-id" required placeholder="如: T915" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">姓名 *</label>
+                        <input type="text" id="emp-name" required placeholder="如: 陳小明" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
 
-                <!-- 其他常見假別 -->
-                <div class="space-y-3">
-                    <h3 class="font-bold text-slate-800">📌 常見給假標準</h3>
-                    <div class="grid md:grid-cols-2 gap-4 text-sm">
-                        <div class="border border-slate-200 p-3 rounded-lg">
-                            <span class="font-bold text-slate-700">普通傷病假：</span>未住院者一年內合計不得超過 30 日，一年內 30 日以內部分，工資折半發給。
-                        </div>
-                        <div class="border border-slate-200 p-3 rounded-lg">
-                            <span class="font-bold text-slate-700">事假：</span>一年內合計不得超過 14 日，期間不給工資。
-                        </div>
-                        <div class="border border-slate-200 p-3 rounded-lg">
-                            <span class="font-bold text-slate-700">婚假：</span>員工結婚給予婚假 8 日，工資照給。
-                        </div>
-                        <div class="border border-slate-200 p-3 rounded-lg">
-                            <span class="font-bold text-slate-700">喪假：</span>父母、配偶喪亡者給予喪假 8 日，工資照給（其他親屬按法令遞減）。
-                        </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">部門 *</label>
+                        <input type="text" id="emp-dept" required placeholder="如: 設計部" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">職稱 *</label>
+                        <input type="text" id="emp-title" required placeholder="如: 資深 UI 設計師" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- 4. 設計公司工作守則 -->
-        <section id="page-rules" class="tab-page hidden space-y-6">
-            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <h2 class="text-xl font-bold text-slate-900 border-b pb-3 border-slate-100">設計公司專屬員工工作守則</h2>
-                <div class="space-y-4 text-sm text-slate-600">
-                    <div class="border-l-4 border-blue-500 pl-4 py-1">
-                        <h3 class="font-bold text-slate-800">1. 設計資產與檔案管理規範</h3>
-                        <p class="mt-1">所有專案設計原始檔（如 AI, PSD, Figma 專案等）須每日備份至公司中央伺服器或指定雲端。禁止個人私自留存完整客戶設計庫，違者依公司規定懲處。</p>
-                    </div>
-                    <div class="border-l-4 border-blue-500 pl-4 py-1">
-                        <h3 class="font-bold text-slate-800">2. 智慧財產權與素材授權標準</h3>
-                        <p class="mt-1">設計過程嚴禁使用未受授權之字型、圖片、音樂或 3D 模型。專案使用之付費素材須透過公司官方帳號採購並保留授權憑證，確保無侵權風險。</p>
-                    </div>
-                    <div class="border-l-4 border-blue-500 pl-4 py-1">
-                        <h3 class="font-bold text-slate-800">3. 專案時程與對接規範</h3>
-                        <p class="mt-1">專案設計師應確實控管提案與交稿時程（Milestones）。若遇客戶需求大幅更動或預期交付延遲，須第一時間回報專案經理（PM）處理，切勿自行承諾客戶無法達成之時程。</p>
-                    </div>
-                    <div class="border-l-4 border-blue-500 pl-4 py-1">
-                        <h3 class="font-bold text-slate-800">4. 軟體授權與資安維護</h3>
-                        <p class="mt-1">公司配發電腦禁止安裝盜版軟體。下班或離開座位時請確實鎖定螢幕，確保設計未公開稿件與機密報價單不致外洩。</p>
-                    </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">到職日期 *</label>
+                    <input type="date" id="emp-date" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-            </div>
-        </section>
 
-    </main>
+                <!-- 薪資帳戶區塊 -->
+                <div class="border-t border-slate-100 pt-4 space-y-3">
+                    <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">💳 薪資劃撥帳戶資訊</h4>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-500 mb-1">銀行代碼 (3碼)</label>
+                            <input type="text" id="emp-bank-code" maxlength="3" placeholder="822" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-[11px] font-medium text-slate-500 mb-1">銀行與分行名稱</label>
+                            <input type="text" id="emp-bank-name" placeholder="中國信託 營業部" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-medium text-slate-500 mb-1">薪資帳號</label>
+                        <input type="text" id="emp-account" placeholder="123456789012" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono">
+                    </div>
+                </div>
 
-    <!-- 新增員工彈出視窗 Modal -->
-    <div id="modal" class="fixed inset-0 bg-slate-900/50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="font-bold text-slate-800">新增員工</h3>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-slate-600">✕</button>
-            </div>
-            <form id="add-employee-form" onsubmit="handleAddEmployee(event)" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">員工工號</label>
-                    <input type="text" id="emp-id" placeholder="例如: T915" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">姓名</label>
-                    <input type="text" id="emp-name" placeholder="例如: 張小明" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">部門</label>
-                    <input type="text" id="emp-dept" placeholder="例如: 設計部" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">職稱</label>
-                    <input type="text" id="emp-title" placeholder="例如: 資深 UI 設計師" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">到職日</label>
-                    <input type="date" id="emp-date" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="flex justify-end gap-2 pt-2">
-                    <button type="button" onclick="toggleModal(false)" class="px-4 py-2 border border-slate-300 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50">取消</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">新增</button>
+                <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-50 transition">取消</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition shadow-md shadow-blue-600/20">儲存資料</button>
                 </div>
             </form>
         </div>
@@ -228,16 +312,40 @@
 
     <!-- JavaScript 邏輯 -->
     <script>
-        // 初始化員工資料庫（預設載入指定的 5 位同仁）
+        // 預設指定員工資料 (含範例薪資帳號)
         let employees = [
-            { id: 'T9014', name: '姜美辰', dept: '設計部', title: '設計師', date: '2023-03-15' },
-            { id: 'T701', name: '戴葳葳', dept: '設計部', title: '設計總監', date: '2020-01-10' },
-            { id: 'T801', name: '姚芳庭', dept: '專案部', title: '專案經理 (PM)', date: '2021-06-01' },
-            { id: 'T901', name: '林恩希', dept: '視覺傳達部', title: '視覺設計師', date: '2022-09-20' },
-            { id: 'T914', name: '莊凱鈞', dept: '多媒體設計部', title: '動態美術設計師', date: '2023-11-01' }
+            { id: 'T9014', name: '姜美辰', dept: '設計部', title: '設計師', date: '2023-03-15', bankCode: '822', bankName: '中國信託', account: '901823712893' },
+            { id: 'T701', name: '戴葳葳', dept: '設計部', title: '設計總監', date: '2020-01-10', bankCode: '013', bankName: '國泰世華', account: '023501928301' },
+            { id: 'T801', name: '姚芳庭', dept: '專案部', title: '專案經理 (PM)', date: '2021-06-01', bankCode: '808', bankName: '玉山銀行', account: '081293810293' },
+            { id: 'T901', name: '林恩希', dept: '視覺傳達部', title: '視覺設計師', date: '2022-09-20', bankCode: '008', bankName: '華南銀行', account: '162938102938' },
+            { id: 'T914', name: '莊凱鈞', dept: '多媒體設計部', title: '動態美術設計師', date: '2023-11-01', bankCode: '822', bankName: '中國信託', account: '542019283102' }
         ];
 
-        // 切換頁籤邏輯
+        // 登入驗證邏輯
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+
+            if (user === 'admin' && pass === 'admin123') {
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                document.getElementById('login-error').classList.add('hidden');
+                renderEmployees();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        // 登出
+        function handleLogout() {
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+        }
+
+        // 切換頁籤
         function switchTab(tabId) {
             document.querySelectorAll('.tab-page').forEach(page => page.classList.add('hidden'));
             document.querySelectorAll('#tabs button').forEach(btn => btn.classList.remove('active-tab'));
@@ -246,79 +354,126 @@
             document.getElementById(`tab-${tabId}`).classList.add('active-tab');
         }
 
-        // 開啟/關閉 Modal
-        function toggleModal(show) {
-            const modal = document.getElementById('modal');
-            if(show) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            } else {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                document.getElementById('add-employee-form').reset();
-            }
-        }
-
-        // 渲染員工列表
+        // 渲染員工列表 (含編輯與薪資帳戶)
         function renderEmployees() {
             const tbody = document.getElementById('employee-list');
             tbody.innerHTML = '';
 
             if (employees.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">目前尚無員工資料</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">目前尚無任何員工資料</td></tr>`;
                 return;
             }
 
-            employees.forEach((emp) => {
+            employees.forEach((emp, index) => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50 transition';
+                tr.className = 'hover:bg-slate-50/80 transition';
+                
+                const bankInfo = (emp.bankCode || emp.bankName || emp.account) 
+                    ? `<div class="text-xs"><span class="font-bold text-slate-700">(${emp.bankCode || '---'}) ${emp.bankName || ''}</span><br><span class="font-mono text-slate-500">${emp.account || '未填寫'}</span></div>`
+                    : `<span class="text-xs text-slate-400 italic">未設定帳戶</span>`;
+
                 tr.innerHTML = `
-                    <td class="px-6 py-4 font-mono font-medium text-blue-600">${emp.id}</td>
-                    <td class="px-6 py-4 font-semibold text-slate-800">${emp.name}</td>
-                    <td class="px-6 py-4">${emp.dept}</td>
-                    <td class="px-6 py-4">${emp.title}</td>
-                    <td class="px-6 py-4">${emp.date}</td>
+                    <td class="px-6 py-4 font-mono font-bold text-blue-600 text-xs">${emp.id}</td>
+                    <td class="px-6 py-4 font-bold text-slate-900">${emp.name}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-xs font-semibold text-slate-800">${emp.dept}</div>
+                        <div class="text-[11px] text-slate-500">${emp.title}</div>
+                    </td>
+                    <td class="px-6 py-4 text-xs font-mono">${emp.date}</td>
+                    <td class="px-6 py-4">${bankInfo}</td>
                     <td class="px-6 py-4 text-center">
-                        <button onclick="deleteEmployee('${emp.id}')" class="text-red-500 hover:text-red-700 font-medium text-xs border border-red-200 hover:bg-red-50 px-2 py-1 rounded transition">
-                            刪除
-                        </button>
+                        <div class="flex justify-center items-center gap-2">
+                            <button onclick="openEmployeeModal(${index})" class="text-xs border border-slate-200 hover:bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md transition font-medium">
+                                ✏️ 編輯
+                            </button>
+                            <button onclick="deleteEmployee(${index})" class="text-xs border border-rose-200 hover:bg-rose-50 text-rose-600 px-2.5 py-1 rounded-md transition font-medium">
+                                🗑️ 刪除
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // 新增員工處理
-        function handleAddEmployee(e) {
-            e.preventDefault();
-            const id = document.getElementById('emp-id').value.trim();
-            const name = document.getElementById('emp-name').value.trim();
-            const dept = document.getElementById('emp-dept').value.trim();
-            const title = document.getElementById('emp-title').value.trim();
-            const date = document.getElementById('emp-date').value;
+        // 開啟 Modal (區分新增/編輯)
+        function openEmployeeModal(index = -1) {
+            const modal = document.getElementById('modal');
+            const form = document.getElementById('employee-form');
+            form.reset();
 
-            // 檢查重複工號
-            if (employees.some(emp => emp.id === id)) {
-                alert('該員工工號已存在，請使用不同工號！');
+            if (index >= 0) {
+                // 編輯模式
+                const emp = employees[index];
+                document.getElementById('modal-title').innerText = `編輯員工資料 - ${emp.name}`;
+                document.getElementById('edit-index').value = index;
+                document.getElementById('emp-id').value = emp.id;
+                document.getElementById('emp-name').value = emp.name;
+                document.getElementById('emp-dept').value = emp.dept;
+                document.getElementById('emp-title').value = emp.title;
+                document.getElementById('emp-date').value = emp.date;
+                document.getElementById('emp-bank-code').value = emp.bankCode || '';
+                document.getElementById('emp-bank-name').value = emp.bankName || '';
+                document.getElementById('emp-account').value = emp.account || '';
+            } else {
+                // 新增模式
+                document.getElementById('modal-title').innerText = '新增員工資料';
+                document.getElementById('edit-index').value = -1;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // 關閉 Modal
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // 儲存表單 (新增或更新)
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('edit-index').value);
+            
+            const empData = {
+                id: document.getElementById('emp-id').value.trim(),
+                name: document.getElementById('emp-name').value.trim(),
+                dept: document.getElementById('emp-dept').value.trim(),
+                title: document.getElementById('emp-title').value.trim(),
+                date: document.getElementById('emp-date').value,
+                bankCode: document.getElementById('emp-bank-code').value.trim(),
+                bankName: document.getElementById('emp-bank-name').value.trim(),
+                account: document.getElementById('emp-account').value.trim()
+            };
+
+            // 新增時檢查工號重複
+            if (editIndex === -1 && employees.some(e => e.id === empData.id)) {
+                alert('該工號已存在！請填寫不同的工號。');
                 return;
             }
 
-            employees.push({ id, name, dept, title, date });
+            if (editIndex >= 0) {
+                // 更新資料
+                employees[editIndex] = empData;
+            } else {
+                // 新增資料
+                employees.push(empData);
+            }
+
             renderEmployees();
-            toggleModal(false);
+            closeModal();
         }
 
-        // 刪除員工處理
-        function deleteEmployee(id) {
-            const emp = employees.find(e => e.id === id);
-            if (confirm(`確定要刪除員工「${emp.name} (${emp.id})」的資料嗎？`)) {
-                employees = employees.filter(e => e.id !== id);
+        // 刪除員工
+        function deleteEmployee(index) {
+            const emp = employees[index];
+            if (confirm(`確定要刪除員工「${emp.name} (${emp.id})」的所有資料與薪資帳戶嗎？`)) {
+                employees.splice(index, 1);
                 renderEmployees();
             }
         }
-
-        // 初始化第一次渲染
-        renderEmployees();
     </script>
 </body>
 </html>
