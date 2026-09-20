@@ -35,6 +35,17 @@
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
+  <!-- 全域讀取中 Loading 指示器 -->
+  <div id="loadingSpinner" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center text-white hidden no-print">
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-xl flex items-center gap-4 border border-slate-700">
+      <svg class="animate-spin h-6 w-6 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span class="text-sm font-medium" id="loadingText">雲端同步中，請稍候...</span>
+    </div>
+  </div>
+
   <!-- Header / Navigation -->
   <header class="bg-slate-900 text-white shadow-md no-print">
     <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -42,7 +53,7 @@
         <div class="bg-indigo-600 p-2 rounded-lg font-bold text-xl">草圖</div>
         <div>
           <h1 class="text-xl font-bold">草圖設計工作室</h1>
-          <p class="text-xs text-slate-400">人事薪資與差勤管理系統 (勞基法合規版)</p>
+          <p class="text-xs text-slate-400">人事薪資與差勤管理系統 (跨裝置雲端同步版)</p>
         </div>
       </div>
 
@@ -83,8 +94,8 @@
             <p class="text-xs text-slate-500">自動支援每半年調薪 1.5% 與投保級距對照</p>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button onclick="fetchGoogleSheetData()" class="bg-sky-600 hover:bg-sky-700 text-white text-sm px-4 py-2 rounded-lg transition">
-              🔄 同步 Google 試算表
+            <button onclick="loadCloudData()" class="bg-sky-600 hover:bg-sky-700 text-white text-sm px-4 py-2 rounded-lg transition flex items-center gap-1">
+              🔄 立即手動同步
             </button>
             <label class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg cursor-pointer transition">
               匯入 Excel 員工資料
@@ -242,7 +253,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-4">
           <button type="button" onclick="closeEmployeeModal()" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50">取消</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">保存</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">保存並同步雲端</button>
         </div>
       </form>
     </div>
@@ -289,7 +300,7 @@
         </div>
         <div class="flex justify-end gap-2 pt-4">
           <button type="button" onclick="closeAttendanceModal()" class="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50">取消</button>
-          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">保存</button>
+          <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">保存並同步雲端</button>
         </div>
       </form>
     </div>
@@ -369,54 +380,99 @@
 
   <!-- JavaScript 邏輯引擎 -->
   <script>
-    // --- Google Apps Script 正式 API 網址 ---
+    // --- Google Apps Script API 網址 ---
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbysJu0lcl9cN8tRFaEcepfC33uDDun6ThNz6xD2tLY/exec";
 
-    // --- 預設資料庫 (LocalStorage 優先) ---
-    let employees = JSON.parse(localStorage.getItem('draft_employees')) || [
-      { id: '1', code: 'A001', name: '王小明', idCard: 'A123456789', dob: '1992-05-15', startDate: '2024-03-01', bankAccount: '700-002123456789', baseSalary: 38000, foodAllowance: 3000, dutyAllowance: 2000 },
-      { id: '2', code: 'A002', name: '姜美辰', idCard: 'O220474588', dob: '1999-10-09', startDate: '2025-09-01', bankAccount: '013-123456789012', baseSalary: 42000, foodAllowance: 3000, dutyAllowance: 5000 }
-    ];
+    // 資料變數定義
+    let employees = [];
+    let attendance = [];
 
-    let attendance = JSON.parse(localStorage.getItem('draft_attendance')) || [
-      { id: '101', empId: '1', date: '2026-03-05', category: 'leave', type: 'sick', hours: 8, note: '感冒請假' },
-      { id: '102', empId: '1', date: '2026-03-12', category: 'overtime', type: 'weekday', hours: 2, note: '專案趕工' },
-      { id: '103', empId: '2', date: '2026-03-18', category: 'leave', type: 'personal', hours: 4, note: '辦理私事' }
-    ];
-
-    // 保存至 LocalStorage
-    function saveData() {
-      localStorage.setItem('draft_employees', JSON.stringify(employees));
-      localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+    // UI Spinner 提示語
+    function showLoading(msg = "雲端同步中，請稍候...") {
+      document.getElementById('loadingText').innerText = msg;
+      document.getElementById('loadingSpinner').classList.remove('hidden');
+    }
+    function hideLoading() {
+      document.getElementById('loadingSpinner').classList.add('hidden');
     }
 
-    // --- 從 Google 試算表同步資料 ---
-    async function fetchGoogleSheetData() {
+    // --- 核心：從雲端載入所有最新資料 ---
+    async function loadCloudData() {
+      showLoading("正在獲取最新雲端資料...");
       try {
         const response = await fetch(GAS_API_URL);
         const data = await response.json();
-        console.log("從試算表取得的資料：", data);
+        
+        if (data && typeof data === 'object') {
+          // 如果 GAS 回傳了 employees 和 attendance 兩張工作表
+          if (Array.isArray(data.employees)) {
+            employees = data.employees.map((item, idx) => ({
+              id: item.id ? item.id.toString() : (idx + 1).toString(),
+              code: item.code || `A00${idx + 1}`,
+              name: item.name || '未命名',
+              idCard: item.idCard || '',
+              dob: item.dob ? item.dob.toString().replace(/\//g, '-') : '1990-01-01',
+              startDate: item.startDate ? item.startDate.toString().replace(/\//g, '-') : '2024-01-01',
+              bankAccount: item.bankAccount || '000-000000000000',
+              baseSalary: Number(item.baseSalary) || 35000,
+              foodAllowance: Number(item.foodAllowance) || 3000,
+              dutyAllowance: Number(item.dutyAllowance) || 0
+            }));
+          }
 
-        if (Array.isArray(data) && data.length > 0) {
-          employees = data.map((item, index) => ({
-            id: item.id ? item.id.toString() : (index + 1).toString(),
-            code: item.code ? `A00${item.code}` : `A00${index + 1}`,
-            name: item.name || '未命名',
-            idCard: item.idCard || '',
-            dob: item.dob ? item.dob.toString().replace(/\//g, '-') : '1990-01-01',
-            startDate: '2026-01-01',        // 預設到職日
-            bankAccount: '000-000000000000',// 預設銀行帳號
-            baseSalary: 35000,               // 預設底薪
-            foodAllowance: 3000,             // 預設伙食津貼
-            dutyAllowance: 0                 // 預設職務津貼
-          }));
-
-          saveData();
-          renderAll();
-          alert('已成功從 Google 試算表載入最新員工資料！');
+          if (Array.isArray(data.attendance)) {
+            attendance = data.attendance.map(item => ({
+              id: item.id ? item.id.toString() : Date.now().toString(),
+              empId: item.empId ? item.empId.toString() : '',
+              date: item.date ? item.date.toString().replace(/\//g, '-') : '',
+              category: item.category || 'leave',
+              type: item.type || 'personal',
+              hours: Number(item.hours) || 0,
+              note: item.note || ''
+            }));
+          }
         }
+        
+        // 備份至 LocalStorage 以防離線
+        localStorage.setItem('draft_employees', JSON.stringify(employees));
+        localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+
+        renderAll();
       } catch (error) {
-        console.error("讀取 Google 試算表失敗：", error);
+        console.error("雲端同步失敗，切換至本機備份模式：", error);
+        employees = JSON.parse(localStorage.getItem('draft_employees')) || [];
+        attendance = JSON.parse(localStorage.getItem('draft_attendance')) || [];
+        renderAll();
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // --- 核心：寫入最新資料至雲端 ---
+    async function syncToCloud() {
+      showLoading("正在將資料上傳同步至雲端...");
+      try {
+        const payload = {
+          employees: employees,
+          attendance: attendance
+        };
+
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          mode: 'no-cors', // 避免 GAS 的 CORS 跨域限制
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        localStorage.setItem('draft_employees', JSON.stringify(employees));
+        localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+      } catch (error) {
+        console.error("雲端上傳失敗：", error);
+        alert("雲端同步出現錯誤，資料已暫存於本機。");
+      } finally {
+        hideLoading();
       }
     }
 
@@ -440,7 +496,6 @@
       if (mode === 'visible') return str;
       if (mode === 'hidden') return '***';
 
-      // masked mode
       if (type === 'idCard') {
         return str.length > 5 ? str.substring(0, 3) + '****' + str.substring(str.length - 3) : '***';
       }
@@ -457,21 +512,20 @@
 
       if (current < start) return emp.baseSalary;
 
-      // 計算經過月數
       const monthsDiff = (current.getFullYear() - start.getFullYear()) * 12 + (current.getMonth() - start.getMonth());
-      const periods = Math.floor(monthsDiff / 6); // 每滿 6 個月一次
+      const periods = Math.floor(monthsDiff / 6);
 
       let adjustedSalary = emp.baseSalary;
       for (let i = 0; i < periods; i++) {
-        adjustedSalary *= 1.015; // 複利 1.5%
+        adjustedSalary *= 1.015;
       }
       return Math.round(adjustedSalary);
     }
 
-    // --- 勞保 / 健保級距對照 (台灣級距擬真計算) ---
+    // --- 勞健保計算 ---
     function calculateInsurance(totalFixedSalary) {
       let laborBracket = Math.max(27470, Math.min(45800, totalFixedSalary));
-      let laborIns = Math.round(laborBracket * 0.11 * 0.2); // 勞保個人負擔 20%
+      let laborIns = Math.round(laborBracket * 0.11 * 0.2);
 
       let healthBracket = Math.max(27470, Math.min(182000, totalFixedSalary));
       let healthIns = Math.round(healthBracket * 0.0517 * 0.3);
@@ -479,21 +533,14 @@
       return { laborIns, healthIns };
     }
 
-    // --- 節日與生日禮金計算 ---
+    // --- 禮金計算 ---
     function calculateBonus(emp, currentMonthStr) {
       let bonus = 0;
       const [year, month] = currentMonthStr.split('-');
       const empDobMonth = emp.dob ? emp.dob.split('-')[1] : '';
 
-      // 當月生日禮金 1000
-      if (empDobMonth === month) {
-        bonus += 1000;
-      }
-
-      // 預設端午(6月)、中秋(9月)、春節(2月) 禮金 1000
-      if (['02', '06', '09'].includes(month)) {
-        bonus += 1000;
-      }
+      if (empDobMonth === month) bonus += 1000;
+      if (['02', '06', '09'].includes(month)) bonus += 1000;
 
       return bonus;
     }
@@ -505,7 +552,7 @@
       renderPayroll();
     }
 
-    // 1. 渲染員工清單
+    // 1. 渲染員工名冊
     function renderEmployees() {
       const currentMonth = document.getElementById('currentMonth').value;
       const tbody = document.getElementById('employeeTableBody');
@@ -581,7 +628,7 @@
       });
     }
 
-    // 3. 渲染薪資彙整表
+    // 3. 渲染薪資發放表
     function renderPayroll() {
       const currentMonth = document.getElementById('currentMonth').value;
       const tbody = document.getElementById('payrollTableBody');
@@ -641,7 +688,7 @@
       });
     }
 
-    // --- Modal 操作與表單處理 ---
+    // --- 員工 CRUD 操作與同步 ---
     function openEmployeeModal(empId = null) {
       document.getElementById('empForm').reset();
       if (empId) {
@@ -670,7 +717,7 @@
       document.getElementById('employeeModal').classList.remove('flex');
     }
 
-    function saveEmployee(e) {
+    async function saveEmployee(e) {
       e.preventDefault();
       const id = document.getElementById('emp_id').value || Date.now().toString();
       const newEmp = {
@@ -690,22 +737,22 @@
       if (idx >= 0) employees[idx] = newEmp;
       else employees.push(newEmp);
 
-      saveData();
       renderAll();
       closeEmployeeModal();
+      await syncToCloud();
     }
 
     function editEmployee(id) { openEmployeeModal(id); }
-    function deleteEmployee(id) {
-      if (confirm('確定要刪除該員工及其紀錄？')) {
+    async function deleteEmployee(id) {
+      if (confirm('確定要刪除該員工及其所有資料？')) {
         employees = employees.filter(e => e.id !== id);
         attendance = attendance.filter(a => a.empId !== id);
-        saveData();
         renderAll();
+        await syncToCloud();
       }
     }
 
-    // --- 差勤 Modal ---
+    // --- 差勤 CRUD 操作與同步 ---
     function openAttendanceModal() {
       const select = document.getElementById('att_empId');
       select.innerHTML = employees.map(e => `<option value="${e.id}">${e.name} (${e.code})</option>`).join('');
@@ -739,7 +786,7 @@
       }
     }
 
-    function saveAttendance(e) {
+    async function saveAttendance(e) {
       e.preventDefault();
       const newAtt = {
         id: Date.now().toString(),
@@ -751,26 +798,26 @@
         note: document.getElementById('att_note').value
       };
       attendance.push(newAtt);
-      saveData();
       renderAll();
       closeAttendanceModal();
+      await syncToCloud();
     }
 
-    function deleteAttendance(id) {
+    async function deleteAttendance(id) {
       if (confirm('確定要刪除此筆差勤紀錄？')) {
         attendance = attendance.filter(a => a.id !== id);
-        saveData();
         renderAll();
+        await syncToCloud();
       }
     }
 
-    // --- Excel 匯入 ---
-    function handleExcelImport(e) {
+    // --- 批次匯入 Excel 並同步 ---
+    async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = async function(evt) {
         const data = new Uint8Array(evt.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -781,14 +828,12 @@
           const row = rows[i];
           if (row && (row[1] || row[2])) {
             const rawDob = row[5] || '1990/01/01';
-            const formattedDob = rawDob.toString().replace(/\//g, '-');
-
             employees.push({
               id: Date.now().toString() + Math.random().toString().slice(2, 5),
               code: row[0] ? `A00${row[0]}` : `A00${employees.length + 1}`,
               name: row[2] || '新員工',
               idCard: row[1] || '',
-              dob: formattedDob,
+              dob: rawDob.toString().replace(/\//g, '-'),
               startDate: '2026-01-01',
               bankAccount: '000-000000000000',
               baseSalary: 35000,
@@ -799,20 +844,20 @@
           }
         }
 
-        saveData();
         renderAll();
-        alert(`成功解析並匯入 ${importedCount} 筆員工資料！`);
+        await syncToCloud();
+        alert(`成功解析並匯入 ${importedCount} 筆員工資料！已同步至雲端。`);
       };
       reader.readAsArrayBuffer(file);
     }
 
-    // --- CSV 差勤檔匯入 ---
-    function handleCSVImport(e) {
+    // --- 批次匯入 CSV 差勤檔並同步 ---
+    async function handleCSVImport(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(evt) {
+      reader.onload = async function(evt) {
         const lines = evt.target.result.split('\n');
         lines.forEach((line, idx) => {
           if (idx === 0 || !line.trim()) return;
@@ -832,9 +877,9 @@
             }
           }
         });
-        saveData();
         renderAll();
-        alert('CSV 差勤明細匯入完成！');
+        await syncToCloud();
+        alert('CSV 差勤明細匯入完成！已同步至雲端。');
       };
       reader.readAsText(file);
     }
@@ -910,10 +955,9 @@
       document.getElementById('payslipModal').classList.remove('flex');
     }
 
-    // 初始化頁面
-    window.onload = async function() {
-      renderAll();
-      await fetchGoogleSheetData();
+    // 頁面初始化：直接發起雲端讀取
+    window.onload = function() {
+      loadCloudData();
     };
   </script>
 </body>
