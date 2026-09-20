@@ -172,7 +172,7 @@
         <div class="flex justify-between items-center mb-6">
           <div>
             <h2 class="text-lg font-bold text-slate-800">月薪資彙整與發放表</h2>
-            <p class="text-xs text-slate-500">自動結算：底薪 + 伙食 + 職務津貼 + 獎金/禮金 + 加班費 - 請假扣款 - 勞健保自負額</p>
+            <p class="text-xs text-slate-500">自動結算：底薪 + 伙食 + 職務津貼 + 獎金/禮金 + 加加班費 - 請假扣款 - 勞健保自負額</p>
           </div>
         </div>
 
@@ -210,11 +210,14 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-medium mb-1">到職日期</label>
-            <input type="date" id="emp_startDate" onchange="autoFillEmpCode()" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <input type="date" id="emp_startDate" onchange="autoFillEmpCode(false)" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
-            <label class="block text-xs font-medium mb-1">員工工號 (依到職日自動計算)</label>
-            <input type="text" id="emp_code" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-indigo-600">
+            <label class="block text-xs font-medium mb-1">員工工號 (可手動修改)</label>
+            <div class="flex gap-1">
+              <input type="text" id="emp_code" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-indigo-600">
+              <button type="button" onclick="autoFillEmpCode(true)" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 border text-slate-600 rounded-lg text-xs whitespace-nowrap">重新生成</button>
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -396,15 +399,18 @@
       document.getElementById('loadingSpinner').classList.add('hidden');
     }
 
-    // --- 日期格式工具：相容 Excel 數字序列號、斜線、句號格式並轉為 YYYY-MM-DD ---
+    // --- 強化版日期解析工具：全面解析 Date 物件、數字序列號、ISO 字串，嚴格輸出 YYYY-MM-DD ---
     function parseExcelDate(val) {
       if (!val) return '';
+      
       if (val instanceof Date) {
-        const y = val.getFullYear();
-        const m = String(val.getMonth() + 1).padStart(2, '0');
-        const d = String(val.getDate()).padStart(2, '0');
+        if (isNaN(val.getTime())) return '';
+        const y = val.getUTCFullYear();
+        const m = String(val.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(val.getUTCDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
       }
+
       if (typeof val === 'number') {
         const date = new Date(Math.round((val - 25569) * 86400 * 1000));
         const y = date.getUTCFullYear();
@@ -412,18 +418,34 @@
         const d = String(date.getUTCDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
       }
-      let str = String(val).trim().replace(/[\/\.]/g, '-');
+
+      let str = String(val).trim();
+      if (str.includes('T')) str = str.split('T')[0];
+      if (str.includes(' ')) str = str.split(' ')[0];
+      str = str.replace(/[\/\.]/g, '-');
+
       const parts = str.split('-');
       if (parts.length === 3) {
-        const y = parts[0];
+        const y = parts[0].padStart(4, '0');
         const m = parts[1].padStart(2, '0');
         const d = parts[2].padStart(2, '0');
+        if (y.length === 4 && !isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          return `${y}-${m}-${d}`;
+        }
+      }
+
+      const dObj = new Date(val);
+      if (!isNaN(dObj.getTime())) {
+        const y = dObj.getFullYear();
+        const m = String(dObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dObj.getDate()).padStart(2, '0');
         return `${y}-${m}-${d}`;
       }
+
       return str;
     }
 
-    // --- 自動生成到職日工號 (例如: 7/1 ➔ T701，若重複則生成 T701A) ---
+    // --- 自動生成到職日預設工號 (例如: 7/1 ➔ T701，若重複則生成 T701A) ---
     function generateEmpCode(startDateStr, currentEmpId = null) {
       if (!startDateStr) startDateStr = '2026-07-01';
       const cleanDate = parseExcelDate(startDateStr);
@@ -445,12 +467,17 @@
       return finalCode;
     }
 
-    // 連動選單：更換到職日即時更新工號
-    function autoFillEmpCode() {
+    // 連動選單：僅在 force=true 或目前工號為空白時才自動填入工號
+    function autoFillEmpCode(force = false) {
+      const codeInput = document.getElementById('emp_code');
       const startDate = document.getElementById('emp_startDate').value;
       const empId = document.getElementById('emp_id').value;
+
+      // 如果使用者已經自行輸入工號且非點擊「重新生成」按鈕，則保持使用者輸入的內容
+      if (!force && codeInput.value.trim() !== '') return;
+
       if (startDate) {
-        document.getElementById('emp_code').value = generateEmpCode(startDate, empId);
+        codeInput.value = generateEmpCode(startDate, empId);
       }
     }
 
@@ -766,7 +793,7 @@
         document.getElementById('empModalTitle').innerText = '新增員工';
         document.getElementById('emp_id').value = '';
         document.getElementById('emp_startDate').value = new Date().toISOString().split('T')[0];
-        autoFillEmpCode();
+        autoFillEmpCode(true);
       }
       document.getElementById('employeeModal').classList.remove('hidden');
       document.getElementById('employeeModal').classList.add('flex');
@@ -871,7 +898,7 @@
       }
     }
 
-    // --- 專屬對應：精準對應官方範例 Excel 格式 ---
+    // --- Excel 匯入：優先抓取 Excel 中的工號，若無才派發預設工號 ---
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -881,52 +908,91 @@
         try {
           showLoading("正在解析 Excel 並同步至雲端...");
           const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-          // 使用 2D 陣列模式讀取，固定抓取各欄位
-          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
+
+          if (!rows || rows.length === 0) {
+            alert("Excel 檔案內容為空！");
+            hideLoading();
+            return;
+          }
+
+          // 偵測標題列位置與欄位 Index
+          let headerRowIdx = -1;
+          let nameIdx = 2;   // 預設 C 欄
+          let idCardIdx = 1; // 預設 B 欄
+          let dobIdx = 5;    // 預設 F 欄
+          let codeIdx = -1;  // 預設尋找工號欄
+
+          for (let r = 0; r < Math.min(rows.length, 10); r++) {
+            const rowStr = rows[r].join(' ');
+            if (rowStr.includes('姓名') || rowStr.includes('出生') || rowStr.includes('身分證')) {
+              headerRowIdx = r;
+              rows[r].forEach((cellText, colIdx) => {
+                const clean = String(cellText).replace(/\s+/g, '').replace(/\*+/g, '');
+                if (clean.includes('姓名') && !clean.includes('英文') && !clean.includes('緊急')) {
+                  nameIdx = colIdx;
+                } else if (clean.includes('身分證') || clean.includes('護照')) {
+                  idCardIdx = colIdx;
+                } else if (clean.includes('出生') || clean.includes('生日') || clean.includes('DOB')) {
+                  dobIdx = colIdx;
+                } else if (clean.includes('工號') || clean.includes('員工編號') || clean.includes('代碼')) {
+                  codeIdx = colIdx;
+                }
+              });
+              break;
+            }
+          }
 
           let importedCount = 0;
+          const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 1;
 
-          // 從第 3 列 (index 2) 開始讀取，自動過濾第 1 列標題 與 第 2 列範例列 (林小明)
-          for (let i = 2; i < rows.length; i++) {
+          for (let i = startRow; i < rows.length; i++) {
             const row = rows[i];
             if (!row || row.length === 0) continue;
 
-            // 依欄位對應:
-            // Col B (index 1): 身分證號*
-            // Col C (index 2): 姓名*
-            // Col F (index 5): 出生年月日*(YYYY/MM/DD)
-            const idCard = String(row[1] || '').trim();
-            const name = String(row[2] || '').trim();
-            const rawDob = row[5];
+            const name = String(row[nameIdx] || '').trim();
+            const idCard = String(row[idCardIdx] || '').trim();
+            const rawDob = row[dobIdx];
             const dob = parseExcelDate(rawDob);
+            const customCode = (codeIdx !== -1 && row[codeIdx]) ? String(row[codeIdx]).trim() : '';
 
-            // 過濾無效列或範例名稱
-            if (!name || name === '林小明' || name === '姓名*' || name === '0') continue;
+            // 自動跳過標題、空白列或第二列範例列 (林小明 / A123456789)
+            if (!name || name === '林小明' || name.includes('姓名') || idCard === 'A123456789') continue;
 
             const startDate = '2026-07-01'; // 預設到職日
-            const code = generateEmpCode(startDate);
 
-            employees.push({
-              id: Date.now().toString() + Math.random().toString().slice(2, 5),
-              code: code,
-              name: name,
-              idCard: idCard || '',
-              dob: dob || '1990-01-01',
-              startDate: startDate,
-              bankAccount: '000-000000000000',
-              baseSalary: 35000,
-              foodAllowance: 3000,
-              dutyAllowance: 0
-            });
-            importedCount++;
+            // 檢查該員工是否已存在，若存在則覆蓋更新生日與身分證
+            const existingEmp = employees.find(e => e.name === name || (idCard && e.idCard === idCard));
+            if (existingEmp) {
+              if (dob) existingEmp.dob = dob;
+              if (idCard) existingEmp.idCard = idCard;
+              if (customCode) existingEmp.code = customCode;
+              importedCount++;
+            } else {
+              const code = customCode || generateEmpCode(startDate);
+              employees.push({
+                id: Date.now().toString() + Math.random().toString().slice(2, 5),
+                code: code,
+                name: name,
+                idCard: idCard || '',
+                dob: dob || '1990-01-01',
+                startDate: startDate,
+                bankAccount: '000-000000000000',
+                baseSalary: 35000,
+                foodAllowance: 3000,
+                dutyAllowance: 0
+              });
+              importedCount++;
+            }
           }
 
           renderAll();
           await syncToCloud();
-          alert(`成功解析並匯入 ${importedCount} 筆員工資料！生日與身分證資料已精準寫入。`);
+          alert(`成功解析並處理 ${importedCount} 筆員工資料！工號與生日已同步更新。`);
         } catch (err) {
           console.error("Excel 解析錯誤:", err);
           alert("Excel 檔案解析失敗，請確認檔案格式！");
