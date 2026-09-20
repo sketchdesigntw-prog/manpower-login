@@ -110,7 +110,7 @@
             <thead>
               <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
                 <th class="p-3">工號/姓名</th>
-                <th class="p-3">身分證/生日</th>
+                <th class="p-3">身分證/出生年月日</th>
                 <th class="p-3">到職日/年資</th>
                 <th class="p-3">銀行帳號</th>
                 <th class="p-3">原始底薪</th>
@@ -209,18 +209,18 @@
         <input type="hidden" id="emp_id">
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium mb-1">員工工號</label>
-            <input type="text" id="emp_code" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <label class="block text-xs font-medium mb-1">到職日期</label>
+            <input type="date" id="emp_startDate" onchange="autoFillEmpCode()" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
-            <label class="block text-xs font-medium mb-1">姓名</label>
-            <input type="text" id="emp_name" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <label class="block text-xs font-medium mb-1">員工工號 (依到職日自動計算)</label>
+            <input type="text" id="emp_code" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500 font-mono font-bold text-indigo-600">
           </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium mb-1">身分證字號</label>
-            <input type="text" id="emp_idCard" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <label class="block text-xs font-medium mb-1">姓名</label>
+            <input type="text" id="emp_name" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-medium mb-1">出生年月日</label>
@@ -229,8 +229,8 @@
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium mb-1">到職日期</label>
-            <input type="date" id="emp_startDate" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <label class="block text-xs font-medium mb-1">身分證字號</label>
+            <input type="text" id="emp_idCard" required class="w-full border rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-medium mb-1">銀行帳號</label>
@@ -396,6 +396,64 @@
       document.getElementById('loadingSpinner').classList.add('hidden');
     }
 
+    // --- 日期格式工具：相容 Excel 數字序列號、斜線、句號格式並轉為 YYYY-MM-DD ---
+    function parseExcelDate(val) {
+      if (!val) return '';
+      if (val instanceof Date) {
+        const y = val.getFullYear();
+        const m = String(val.getMonth() + 1).padStart(2, '0');
+        const d = String(val.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      if (typeof val === 'number') {
+        const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+        const y = date.getUTCFullYear();
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(date.getUTCDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      let str = String(val).trim().replace(/[\/\.]/g, '-');
+      const parts = str.split('-');
+      if (parts.length === 3) {
+        const y = parts[0];
+        const m = parts[1].padStart(2, '0');
+        const d = parts[2].padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return str;
+    }
+
+    // --- 自動生成到職日工號 (例如: 7/1 ➔ T701，若重複則生成 T701A) ---
+    function generateEmpCode(startDateStr, currentEmpId = null) {
+      if (!startDateStr) startDateStr = '2026-07-01';
+      const cleanDate = parseExcelDate(startDateStr);
+      const parts = cleanDate.split('-');
+      if (parts.length < 3) return 'T701';
+
+      const month = parseInt(parts[1], 10);
+      const day = parseInt(parts[2], 10);
+      const dayStr = day < 10 ? '0' + day : '' + day;
+      const baseCode = `T${month}${dayStr}`;
+
+      let finalCode = baseCode;
+      let suffixAscii = 65; // 英文字母 'A'
+
+      while (employees.some(e => e.code === finalCode && String(e.id) !== String(currentEmpId))) {
+        finalCode = baseCode + String.fromCharCode(suffixAscii);
+        suffixAscii++;
+      }
+      return finalCode;
+    }
+
+    // 連動選單：更換到職日即時更新工號
+    function autoFillEmpCode() {
+      const startDate = document.getElementById('emp_startDate').value;
+      const empId = document.getElementById('emp_id').value;
+      if (startDate) {
+        document.getElementById('emp_code').value = generateEmpCode(startDate, empId);
+      }
+    }
+
     // --- 核心：從雲端載入所有最新資料 ---
     async function loadCloudData() {
       showLoading("正在獲取最新雲端資料...");
@@ -404,27 +462,29 @@
         const data = await response.json();
         
         if (data && typeof data === 'object') {
-          // 如果 GAS 回傳了 employees 和 attendance 兩張工作表
           if (Array.isArray(data.employees)) {
-            employees = data.employees.map((item, idx) => ({
-              id: item.id ? item.id.toString() : (idx + 1).toString(),
-              code: item.code || `A00${idx + 1}`,
-              name: item.name || '未命名',
-              idCard: item.idCard || '',
-              dob: item.dob ? item.dob.toString().replace(/\//g, '-') : '1990-01-01',
-              startDate: item.startDate ? item.startDate.toString().replace(/\//g, '-') : '2024-01-01',
-              bankAccount: item.bankAccount || '000-000000000000',
-              baseSalary: Number(item.baseSalary) || 35000,
-              foodAllowance: Number(item.foodAllowance) || 3000,
-              dutyAllowance: Number(item.dutyAllowance) || 0
-            }));
+            employees = data.employees.map((item, idx) => {
+              const startDate = item.startDate ? parseExcelDate(item.startDate) : '2026-07-01';
+              return {
+                id: item.id ? item.id.toString() : (idx + 1).toString(),
+                code: item.code || generateEmpCode(startDate),
+                name: item.name || '未命名',
+                idCard: item.idCard || '',
+                dob: item.dob ? parseExcelDate(item.dob) : '1990-01-01',
+                startDate: startDate,
+                bankAccount: item.bankAccount || '000-000000000000',
+                baseSalary: Number(item.baseSalary) || 35000,
+                foodAllowance: Number(item.foodAllowance) || 3000,
+                dutyAllowance: Number(item.dutyAllowance) || 0
+              };
+            });
           }
 
           if (Array.isArray(data.attendance)) {
             attendance = data.attendance.map(item => ({
               id: item.id ? item.id.toString() : Date.now().toString(),
               empId: item.empId ? item.empId.toString() : '',
-              date: item.date ? item.date.toString().replace(/\//g, '-') : '',
+              date: item.date ? parseExcelDate(item.date) : '',
               category: item.category || 'leave',
               type: item.type || 'personal',
               hours: Number(item.hours) || 0,
@@ -433,7 +493,6 @@
           }
         }
         
-        // 備份至 LocalStorage 以防離線
         localStorage.setItem('draft_employees', JSON.stringify(employees));
         localStorage.setItem('draft_attendance', JSON.stringify(attendance));
 
@@ -448,33 +507,33 @@
       }
     }
 
- // --- 核心：寫入最新資料至雲端 ---
-async function syncToCloud() {
-  showLoading("正在將資料上傳同步至雲端...");
-  try {
-    const payload = {
-      employees: employees,
-      attendance: attendance
-    };
+    // --- 核心：寫入最新資料至雲端 ---
+    async function syncToCloud() {
+      showLoading("正在將資料上傳同步至雲端...");
+      try {
+        const payload = {
+          employees: employees,
+          attendance: attendance
+        };
 
-    // 使用 URLSearchParams 將資料轉為 表單格式，解決 Google Apps Script CORS 限制
-    const formData = new URLSearchParams();
-    formData.append("data", JSON.stringify(payload));
+        const formData = new URLSearchParams();
+        formData.append("data", JSON.stringify(payload));
 
-    await fetch(GAS_API_URL, {
-      method: 'POST',
-      body: formData
-    });
+        await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: formData
+        });
 
-    localStorage.setItem('draft_employees', JSON.stringify(employees));
-    localStorage.setItem('draft_attendance', JSON.stringify(attendance));
-  } catch (error) {
-    console.error("雲端上傳失敗：", error);
-    alert("雲端同步出現錯誤，請確認網路連線或 Apps Script 部署設定。");
-  } finally {
-    hideLoading();
-  }
-}
+        localStorage.setItem('draft_employees', JSON.stringify(employees));
+        localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+      } catch (error) {
+        console.error("雲端上傳失敗：", error);
+        alert("雲端同步出現錯誤，請確認網路連線或 Apps Script 部署設定。");
+      } finally {
+        hideLoading();
+      }
+    }
+
     // TAB 切換
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -569,8 +628,8 @@ async function syncToCloud() {
 
         tbody.innerHTML += `
           <tr class="border-b border-slate-100 hover:bg-slate-50">
-            <td class="p-3 font-medium">${emp.name}<br><span class="text-xs text-slate-400">${emp.code}</span></td>
-            <td class="p-3">${maskText(emp.idCard, 'idCard')}<br><span class="text-xs text-slate-400">${emp.dob}</span></td>
+            <td class="p-3 font-medium">${emp.name}<br><span class="text-xs text-indigo-600 font-bold font-mono">${emp.code}</span></td>
+            <td class="p-3">${maskText(emp.idCard, 'idCard')}<br><span class="text-xs text-slate-500 font-mono">${emp.dob || '-'}</span></td>
             <td class="p-3">${emp.startDate}<br><span class="text-xs text-indigo-600 font-semibold">${seniorityText}</span></td>
             <td class="p-3">${maskText(emp.bankAccount, 'bank')}</td>
             <td class="p-3">NT$ ${emp.baseSalary.toLocaleString()}</td>
@@ -671,7 +730,7 @@ async function syncToCloud() {
 
         tbody.innerHTML += `
           <tr class="border-b border-slate-100 hover:bg-slate-50">
-            <td class="p-3 font-medium">${emp.name}<br><span class="text-xs text-slate-400">${emp.code}</span></td>
+            <td class="p-3 font-medium">${emp.name}<br><span class="text-xs text-slate-400 font-mono">${emp.code}</span></td>
             <td class="p-3">NT$ ${adjustedSalary.toLocaleString()}</td>
             <td class="p-3">NT$ ${(food + duty).toLocaleString()}</td>
             <td class="p-3 text-amber-600 font-medium">NT$ ${bonus.toLocaleString()}</td>
@@ -706,6 +765,8 @@ async function syncToCloud() {
       } else {
         document.getElementById('empModalTitle').innerText = '新增員工';
         document.getElementById('emp_id').value = '';
+        document.getElementById('emp_startDate').value = new Date().toISOString().split('T')[0];
+        autoFillEmpCode();
       }
       document.getElementById('employeeModal').classList.remove('hidden');
       document.getElementById('employeeModal').classList.add('flex');
@@ -721,12 +782,12 @@ async function syncToCloud() {
       const id = document.getElementById('emp_id').value || Date.now().toString();
       const newEmp = {
         id,
-        code: document.getElementById('emp_code').value,
-        name: document.getElementById('emp_name').value,
-        idCard: document.getElementById('emp_idCard').value,
+        code: document.getElementById('emp_code').value.trim(),
+        name: document.getElementById('emp_name').value.trim(),
+        idCard: document.getElementById('emp_idCard').value.trim(),
         dob: document.getElementById('emp_dob').value,
         startDate: document.getElementById('emp_startDate').value,
-        bankAccount: document.getElementById('emp_bankAccount').value,
+        bankAccount: document.getElementById('emp_bankAccount').value.trim(),
         baseSalary: Number(document.getElementById('emp_baseSalary').value),
         foodAllowance: Number(document.getElementById('emp_foodAllowance').value),
         dutyAllowance: Number(document.getElementById('emp_dutyAllowance').value)
@@ -810,30 +871,51 @@ async function syncToCloud() {
       }
     }
 
-    // --- 批次匯入 Excel 並同步 ---
+    // --- 專屬對應：精準對應官方範例 Excel 格式 ---
     async function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = async function(evt) {
-        const data = new Uint8Array(evt.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        try {
+          showLoading("正在解析 Excel 並同步至雲端...");
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-        let importedCount = 0;
-        for (let i = 2; i < rows.length; i++) {
-          const row = rows[i];
-          if (row && (row[1] || row[2])) {
-            const rawDob = row[5] || '1990/01/01';
+          // 使用 2D 陣列模式讀取，固定抓取各欄位
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+
+          let importedCount = 0;
+
+          // 從第 3 列 (index 2) 開始讀取，自動過濾第 1 列標題 與 第 2 列範例列 (林小明)
+          for (let i = 2; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            // 依欄位對應:
+            // Col B (index 1): 身分證號*
+            // Col C (index 2): 姓名*
+            // Col F (index 5): 出生年月日*(YYYY/MM/DD)
+            const idCard = String(row[1] || '').trim();
+            const name = String(row[2] || '').trim();
+            const rawDob = row[5];
+            const dob = parseExcelDate(rawDob);
+
+            // 過濾無效列或範例名稱
+            if (!name || name === '林小明' || name === '姓名*' || name === '0') continue;
+
+            const startDate = '2026-07-01'; // 預設到職日
+            const code = generateEmpCode(startDate);
+
             employees.push({
               id: Date.now().toString() + Math.random().toString().slice(2, 5),
-              code: row[0] ? `A00${row[0]}` : `A00${employees.length + 1}`,
-              name: row[2] || '新員工',
-              idCard: row[1] || '',
-              dob: rawDob.toString().replace(/\//g, '-'),
-              startDate: '2026-01-01',
+              code: code,
+              name: name,
+              idCard: idCard || '',
+              dob: dob || '1990-01-01',
+              startDate: startDate,
               bankAccount: '000-000000000000',
               baseSalary: 35000,
               foodAllowance: 3000,
@@ -841,11 +923,17 @@ async function syncToCloud() {
             });
             importedCount++;
           }
-        }
 
-        renderAll();
-        await syncToCloud();
-        alert(`成功解析並匯入 ${importedCount} 筆員工資料！已同步至雲端。`);
+          renderAll();
+          await syncToCloud();
+          alert(`成功解析並匯入 ${importedCount} 筆員工資料！生日與身分證資料已精準寫入。`);
+        } catch (err) {
+          console.error("Excel 解析錯誤:", err);
+          alert("Excel 檔案解析失敗，請確認檔案格式！");
+        } finally {
+          hideLoading();
+          e.target.value = '';
+        }
       };
       reader.readAsArrayBuffer(file);
     }
@@ -867,7 +955,7 @@ async function syncToCloud() {
               attendance.push({
                 id: Date.now().toString() + idx,
                 empId: emp.id,
-                date: cols[1].trim(),
+                date: parseExcelDate(cols[1].trim()),
                 category: cols[2].trim(),
                 type: cols[3].trim(),
                 hours: Number(cols[4].trim()),
