@@ -83,6 +83,9 @@
             <p class="text-xs text-slate-500">自動支援每半年調薪 1.5% 與投保級距對照</p>
           </div>
           <div class="flex flex-wrap gap-2">
+            <button onclick="fetchGoogleSheetData()" class="bg-sky-600 hover:bg-sky-700 text-white text-sm px-4 py-2 rounded-lg transition">
+              🔄 同步 Google 試算表
+            </button>
             <label class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg cursor-pointer transition">
               匯入 Excel 員工資料
               <input type="file" id="excelInput" accept=".xlsx, .xls" onchange="handleExcelImport(event)" class="hidden">
@@ -366,10 +369,13 @@
 
   <!-- JavaScript 邏輯引擎 -->
   <script>
+    // --- Google Apps Script 正式 API 網址 ---
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbysJu0lcl9cN8tRFaEcepfC33uDDun6ThNz6xD2tLY/exec";
+
     // --- 預設資料庫 (LocalStorage 優先) ---
     let employees = JSON.parse(localStorage.getItem('draft_employees')) || [
       { id: '1', code: 'A001', name: '王小明', idCard: 'A123456789', dob: '1992-05-15', startDate: '2024-03-01', bankAccount: '700-002123456789', baseSalary: 38000, foodAllowance: 3000, dutyAllowance: 2000 },
-      { id: '2', code: 'A002', name: '陳美玲', idCard: 'B220987654', dob: '1995-10-10', startDate: '2025-09-01', bankAccount: '013-123456789012', baseSalary: 42000, foodAllowance: 3000, dutyAllowance: 5000 }
+      { id: '2', code: 'A002', name: '姜美辰', idCard: 'O220474588', dob: '1999-10-09', startDate: '2025-09-01', bankAccount: '013-123456789012', baseSalary: 42000, foodAllowance: 3000, dutyAllowance: 5000 }
     ];
 
     let attendance = JSON.parse(localStorage.getItem('draft_attendance')) || [
@@ -382,6 +388,36 @@
     function saveData() {
       localStorage.setItem('draft_employees', JSON.stringify(employees));
       localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+    }
+
+    // --- 從 Google 試算表同步資料 ---
+    async function fetchGoogleSheetData() {
+      try {
+        const response = await fetch(GAS_API_URL);
+        const data = await response.json();
+        console.log("從試算表取得的資料：", data);
+
+        if (Array.isArray(data) && data.length > 0) {
+          employees = data.map((item, index) => ({
+            id: item.id ? item.id.toString() : (index + 1).toString(),
+            code: item.code ? `A00${item.code}` : `A00${index + 1}`,
+            name: item.name || '未命名',
+            idCard: item.idCard || '',
+            dob: item.dob ? item.dob.toString().replace(/\//g, '-') : '1990-01-01',
+            startDate: '2026-01-01',        // 預設到職日
+            bankAccount: '000-000000000000',// 預設銀行帳號
+            baseSalary: 35000,               // 預設底薪
+            foodAllowance: 3000,             // 預設伙食津貼
+            dutyAllowance: 0                 // 預設職務津貼
+          }));
+
+          saveData();
+          renderAll();
+          alert('已成功從 Google 試算表載入最新員工資料！');
+        }
+      } catch (error) {
+        console.error("讀取 Google 試算表失敗：", error);
+      }
     }
 
     // TAB 切換
@@ -432,13 +468,11 @@
       return Math.round(adjustedSalary);
     }
 
-    // --- 勞保 / 健保級距對照 (簡易 2026/2025 台灣級距擬真計算) ---
+    // --- 勞保 / 健保級距對照 (台灣級距擬真計算) ---
     function calculateInsurance(totalFixedSalary) {
-      // 假設最低投保薪資 27,470，最高 45,800 (勞保)
       let laborBracket = Math.max(27470, Math.min(45800, totalFixedSalary));
       let laborIns = Math.round(laborBracket * 0.11 * 0.2); // 勞保個人負擔 20%
 
-      // 健保個人負擔 30% (費率 5.17%)
       let healthBracket = Math.max(27470, Math.min(182000, totalFixedSalary));
       let healthIns = Math.round(healthBracket * 0.0517 * 0.3);
 
@@ -557,20 +591,18 @@
         const adjustedSalary = calculateAdjustedSalary(emp, currentMonth);
         const food = Number(emp.foodAllowance);
         const duty = Number(emp.dutyAllowance);
-        const hourlyRate = (adjustedSalary + food + duty) / 240; // 時薪基準 (月薪/240h)
+        const hourlyRate = (adjustedSalary + food + duty) / 240;
 
-        // 計算請假扣款 & 加班費
         const empAtt = attendance.filter(a => a.empId === emp.id && a.date.startsWith(currentMonth));
         let leaveDeduction = 0;
         let overtimePay = 0;
 
         empAtt.forEach(a => {
           if (a.category === 'leave') {
-            if (a.type === 'personal') leaveDeduction += a.hours * hourlyRate; // 全扣
-            if (a.type === 'sick' || a.type === 'menstrual') leaveDeduction += a.hours * hourlyRate * 0.5; // 半扣
+            if (a.type === 'personal') leaveDeduction += a.hours * hourlyRate;
+            if (a.type === 'sick' || a.type === 'menstrual') leaveDeduction += a.hours * hourlyRate * 0.5;
           } else if (a.category === 'overtime') {
             if (a.type === 'weekday') {
-              // 前2小時 1.34，後2小時 1.67
               const h1 = Math.min(2, a.hours);
               const h2 = Math.max(0, a.hours - 2);
               overtimePay += (h1 * hourlyRate * 1.34) + (h2 * hourlyRate * 1.67);
@@ -732,7 +764,7 @@
       }
     }
 
-    // --- Excel 匯入 (SheetJS) ---
+    // --- Excel 匯入 ---
     function handleExcelImport(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -744,27 +776,32 @@
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
-        // 從第 3 列起讀取 (Index 2)
+        let importedCount = 0;
         for (let i = 2; i < rows.length; i++) {
           const row = rows[i];
-          if (row && row[0]) {
+          if (row && (row[1] || row[2])) {
+            const rawDob = row[5] || '1990/01/01';
+            const formattedDob = rawDob.toString().replace(/\//g, '-');
+
             employees.push({
               id: Date.now().toString() + Math.random().toString().slice(2, 5),
-              code: row[0] || `A${employees.length+1}`,
-              name: row[1] || '新員工',
-              idCard: row[2] || '',
-              dob: row[3] || '1990-01-01',
-              startDate: row[4] || '2026-01-01',
-              bankAccount: row[5] || '',
-              baseSalary: Number(row[6]) || 30000,
-              foodAllowance: Number(row[7]) || 3000,
-              dutyAllowance: Number(row[8]) || 0
+              code: row[0] ? `A00${row[0]}` : `A00${employees.length + 1}`,
+              name: row[2] || '新員工',
+              idCard: row[1] || '',
+              dob: formattedDob,
+              startDate: '2026-01-01',
+              bankAccount: '000-000000000000',
+              baseSalary: 35000,
+              foodAllowance: 3000,
+              dutyAllowance: 0
             });
+            importedCount++;
           }
         }
+
         saveData();
         renderAll();
-        alert('Excel 員工資料匯入成功！');
+        alert(`成功解析並匯入 ${importedCount} 筆員工資料！`);
       };
       reader.readAsArrayBuffer(file);
     }
@@ -777,9 +814,8 @@
       const reader = new FileReader();
       reader.onload = function(evt) {
         const lines = evt.target.result.split('\n');
-        // 格式：工號,日期,類別(leave/overtime),類型,時數,備註
         lines.forEach((line, idx) => {
-          if (idx === 0 || !line.trim()) return; // Skip Header
+          if (idx === 0 || !line.trim()) return;
           const cols = line.split(',');
           if (cols.length >= 5) {
             const emp = employees.find(e => e.code === cols[0].trim());
@@ -875,8 +911,9 @@
     }
 
     // 初始化頁面
-    window.onload = function() {
+    window.onload = async function() {
       renderAll();
+      await fetchGoogleSheetData();
     };
   </script>
 </body>
