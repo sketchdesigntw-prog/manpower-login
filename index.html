@@ -381,7 +381,7 @@
   <!-- JavaScript 邏輯引擎 -->
   <script>
     // --- Google Apps Script API 網址 ---
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbysJu0lcl9cN8tRFaEcepfC33uDDun6ThNz6xD2tLY/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbySfUMeAWzepgvhrEz2eE0Fgp-eJui0-A-7eisC8RIxoin6b6WSRz0PXV2fFRmKcvHF/exec";
 
     // 資料變數定義
     let employees = [];
@@ -448,34 +448,33 @@
       }
     }
 
-    // --- 核心：寫入最新資料至雲端 ---
-    async function syncToCloud() {
-      showLoading("正在將資料上傳同步至雲端...");
-      try {
-        const payload = {
-          employees: employees,
-          attendance: attendance
-        };
+ // --- 核心：寫入最新資料至雲端 ---
+async function syncToCloud() {
+  showLoading("正在將資料上傳同步至雲端...");
+  try {
+    const payload = {
+      employees: employees,
+      attendance: attendance
+    };
 
-        await fetch(GAS_API_URL, {
-          method: 'POST',
-          mode: 'no-cors', // 避免 GAS 的 CORS 跨域限制
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
+    // 使用 URLSearchParams 將資料轉為 表單格式，解決 Google Apps Script CORS 限制
+    const formData = new URLSearchParams();
+    formData.append("data", JSON.stringify(payload));
 
-        localStorage.setItem('draft_employees', JSON.stringify(employees));
-        localStorage.setItem('draft_attendance', JSON.stringify(attendance));
-      } catch (error) {
-        console.error("雲端上傳失敗：", error);
-        alert("雲端同步出現錯誤，資料已暫存於本機。");
-      } finally {
-        hideLoading();
-      }
-    }
+    await fetch(GAS_API_URL, {
+      method: 'POST',
+      body: formData
+    });
 
+    localStorage.setItem('draft_employees', JSON.stringify(employees));
+    localStorage.setItem('draft_attendance', JSON.stringify(attendance));
+  } catch (error) {
+    console.error("雲端上傳失敗：", error);
+    alert("雲端同步出現錯誤，請確認網路連線或 Apps Script 部署設定。");
+  } finally {
+    hideLoading();
+  }
+}
     // TAB 切換
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
